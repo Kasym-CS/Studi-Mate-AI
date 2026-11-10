@@ -1,0 +1,7 @@
+{
+  "name": "studymate-ai-mvp",
+  "version": "0.4.0",
+  "private": true,
+  "description": "StudyMate AI MVP: single-page app plus one serverless function for the AI helper",
+  "engines": { "node": ">=18" }
+}

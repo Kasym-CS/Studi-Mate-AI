@@ -1,0 +1,1609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StudyMate AI</title>
+<meta name="description" content="StudyMate AI MVP: Goal Check, weekly plan, hint tutor, Teach-back. Astana IT University student project, CS-2420.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: one narrow app column, a step rail on top, one card per screen; phone-first. Palette: deep teal ink, teal action, amber highlight. */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --ink:#12262E; --muted:#57696F; --line:#D5DEE2;
+  --accent:#0B7C72; --accent-ink:#FFFFFF; --accent2:#E39B2D; --sel:#1E5A8A;
+  --ok:#2E7D4F; --warn:#B7791F; --bad:#B23A3A;
+  --chip:#E6EDEF; --soft-accent:#DDF1EE; --soft-sel:#E1ECF6; --soft-accent2:#FBEBD3;
+  --display:'Rubik', 'Trebuchet MS', Arial, sans-serif; --body:'Nunito Sans', 'Segoe UI', Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D171B; --surface:#142328; --ink:#E6F0F1; --muted:#9FB3B8; --line:#26393F;
+  --accent:#34C2B2; --accent-ink:#04201C; --accent2:#F2B451; --sel:#7FB6E6;
+  --ok:#6CC795; --warn:#E3B45C; --bad:#F08A8A;
+  --chip:#1D3036; --soft-accent:#133A36; --soft-sel:#17304A; --soft-accent2:#3A2D16; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D171B; --surface:#142328; --ink:#E6F0F1; --muted:#9FB3B8; --line:#26393F;
+  --accent:#34C2B2; --accent-ink:#04201C; --accent2:#F2B451; --sel:#7FB6E6;
+  --ok:#6CC795; --warn:#E3B45C; --bad:#F08A8A;
+  --chip:#1D3036; --soft-accent:#133A36; --soft-sel:#17304A; --soft-accent2:#3A2D16; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 96px}
+.app{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;border-radius:11px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:19px}
+.brand h1{font-family:var(--display);font-size:20px;margin:0;font-weight:600}
+.brand small{display:block;color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.live{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;padding:6px 12px;border-radius:999px;
+  background:var(--soft-accent2);color:var(--ink);border:1px solid var(--accent2);text-decoration:none}
+.live:hover{background:var(--accent2);color:#1B1304}
+.live .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.iconbtn{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.lang{display:flex}
+.lang button{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;font-weight:700;padding:5px 10px;cursor:pointer;margin-left:-1px}
+.lang button:first-child{border-radius:8px 0 0 8px;margin-left:0}.lang button:last-child{border-radius:0 8px 8px 0}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+ol.rail{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+ol.rail li{font-size:12px;color:var(--muted);border-top:4px solid var(--line);padding-top:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ol.rail li.done{border-color:var(--sel);color:var(--ink)}
+ol.rail li.now{border-color:var(--accent);color:var(--ink);font-weight:800}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:16px}
+h2{font-family:var(--display);font-weight:600;font-size:26px;line-height:1.2;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:600;font-size:18px;margin:0}
+p{margin:0}.muted{color:var(--muted)}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.choice{border:2px solid var(--line);border-radius:12px;padding:14px;background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.choice b{font-family:var(--display);font-weight:600;font-size:17px}
+.choice span{color:var(--muted);font-size:14px}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--soft-accent)}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:14px}
+input[type=number],select,textarea,input[type=text]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{min-height:130px;resize:vertical}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.row > *{min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.btn{font:inherit;font-weight:800;border:0;border-radius:10px;padding:12px 18px;cursor:pointer;background:var(--accent);color:var(--accent-ink);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sel{background:var(--sel);color:var(--surface)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+a:focus-visible,.btn:focus-visible,.choice:focus-visible,.opt:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+.q{font-family:var(--display);font-size:22px;font-weight:600}
+.opts{display:grid;gap:8px}
+.opt{border:2px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;text-align:left;border-radius:10px;padding:12px 14px;cursor:pointer}
+.opt[aria-pressed="true"]{border-color:var(--sel);background:var(--soft-sel)}
+.opt.right{border-color:var(--ok)}
+.progress{height:8px;background:var(--chip);border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter .bar{position:relative;height:14px;background:var(--chip);border-radius:999px}
+.meter .fill{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:999px}
+.meter .target{position:absolute;top:-6px;bottom:-6px;width:4px;border-radius:2px;background:var(--accent2)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--bg);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--display);font-size:24px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+ul.tags{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+ul.tags li{padding:6px 12px;border-radius:999px;font-size:14px;font-weight:700}
+.tag-weak{background:var(--soft-accent2);color:var(--ink)}.tag-ok{background:var(--soft-accent);color:var(--ink)}
+.week{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.week header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.task{display:flex;gap:10px;align-items:flex-start}
+.task input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent)}
+.hint{background:var(--soft-sel);border-radius:10px;padding:12px 14px}
+.msg{padding:12px 14px;border-radius:10px;font-weight:700}
+.msg.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ink)}
+.msg.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--ink)}
+.helpbox{display:flex;flex-direction:column;gap:12px;background:var(--soft-accent2);border:1px solid var(--accent2);border-radius:12px;padding:14px 16px}
+.helpbox p{font-weight:700}
+.chat{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto}
+.bubble{padding:10px 12px;border-radius:12px;max-width:90%;white-space:pre-wrap}
+.bubble.me{align-self:flex-end;background:var(--soft-accent)}
+.bubble.ai{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
+.score{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.ring{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:26px;color:var(--ink)}
+.ring span{width:76px;height:76px;border-radius:50%;background:var(--surface);display:grid;place-items:center}
+.scale{display:flex;gap:6px;flex-wrap:wrap}
+.scale button{width:44px;height:44px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:800;cursor:pointer}
+.scale button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft-accent)}
+pre.code{background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-all;font-size:12px;margin:0;max-height:160px;overflow:auto}
+.sub{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:12px;padding:14px}
+.etypes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.etile{border-radius:12px;padding:12px;background:var(--bg);border-left:5px solid var(--accent2);display:flex;flex-direction:column;gap:4px;min-width:0}
+.etile b{font-family:var(--display);font-size:22px;font-variant-numeric:tabular-nums}
+.etile .nm{font-weight:800}.etile small{color:var(--muted)}
+.etile.gap{border-left-color:var(--bad)}.etile.mis{border-left-color:var(--warn)}.etile.care{border-left-color:var(--accent2)}.etile.slow{border-left-color:var(--sel)}
+table.terms{width:100%;border-collapse:collapse;font-size:14px}
+table.terms th,table.terms td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+table.terms th{font-size:12px;color:var(--muted);letter-spacing:.06em}
+.tutors{display:flex;flex-direction:column;gap:8px}
+.tutor{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.tutor .who{flex:1;min-width:150px;display:flex;flex-direction:column}
+.tutor .gr{font-family:var(--display);font-weight:700;font-size:20px;color:var(--ok)}
+.btn.sm{padding:8px 14px;font-size:14px}
+input[type=file]{font:inherit;font-size:14px;color:var(--ink);max-width:100%}
+.msg a{color:inherit;text-decoration:underline}
+.fab{position:fixed;z-index:20;right:max(16px, env(safe-area-inset-right, 0px));bottom:max(16px, env(safe-area-inset-bottom, 0px));border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.fab .ai-ico{width:24px;height:24px;border-radius:50%;background:var(--accent-ink);color:var(--accent);display:grid;place-items:center;font-size:11px;font-weight:800}
+.panel{position:fixed;z-index:30;right:max(16px, env(safe-area-inset-right, 0px));bottom:max(16px, env(safe-area-inset-bottom, 0px));width:min(400px, calc(100vw - 32px));height:min(600px, calc(100vh - 32px));background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:flex;flex-direction:column;overflow:hidden}
+.panel header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.panel .body{padding:12px 16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;min-height:0}
+.panel .chat{max-height:none;overflow:visible}
+.panel footer{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 10px;cursor:pointer;text-align:left}
+.chips button:disabled,#chat-send:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:560px){.panel{left:0;right:0;bottom:0;width:auto;height:85vh;border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom, 0px)}}
+.foot{font-size:12px;color:var(--muted);text-align:center}
+.footrow{display:flex;justify-content:center}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(5,15,18,.55);display:flex;align-items:center;justify-content:center;
+  padding:16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px))}
+.modal .box{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;width:min(680px, 100%);max-height:100%;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.modal .box header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+ol.path{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+ol.path li{display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start}
+ol.path .num{width:36px;height:36px;border-radius:50%;background:var(--chip);color:var(--ink);display:grid;place-items:center;font-family:var(--display);font-weight:700}
+ol.path .st{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+ol.path .st h3{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+ol.path .st p{font-size:14px}
+ol.path .st p b{color:var(--muted);font-weight:800}
+ol.path li.here .num{background:var(--accent);color:var(--accent-ink)}
+ol.path li.here .st{border:2px solid var(--accent);background:var(--soft-accent)}
+ol.path li.later .st{border-style:dashed}
+.tabs{display:flex;border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;background:var(--bg)}
+.tabs button{flex:1;font:inherit;font-weight:800;border:0;border-radius:9px;padding:10px;background:transparent;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+input[type=email],input[type=password],input[type=date]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.err{color:var(--bad);font-weight:700;font-size:14px}
+.note{font-size:13px;color:var(--muted)}
+.demo{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--soft-sel);border-radius:10px;padding:10px 12px;font-size:14px}
+.demo code{font-family:ui-monospace,Consolas,monospace;font-weight:700}
+.acct{display:inline-flex;align-items:center;gap:6px}
+.acct .who{font-size:13px;font-weight:800;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.tier{border:2px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.tier.on{border-color:var(--accent);background:var(--soft-accent)}
+.tier .price{font-family:var(--display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.tier .price small{font-size:13px;color:var(--muted);font-family:var(--body);font-weight:700}
+.tier ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px;flex:1}
+.cmp{display:flex;flex-direction:column;gap:8px}
+.cmp .ln{display:grid;grid-template-columns:minmax(90px,140px) 1fr 48px;gap:10px;align-items:center;font-size:14px}
+.cmp .ln .bar{height:12px;background:var(--chip);border-radius:999px;overflow:hidden}
+.cmp .ln .bar i{display:block;height:100%;background:var(--sel);border-radius:999px}
+.cmp .ln.last .bar i{background:var(--accent)}
+.cmp .ln b{text-align:right;font-variant-numeric:tabular-nums}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.week .topicrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill.ok{background:var(--soft-accent);color:var(--ink)}
+pre.code.sum{word-break:normal;overflow-wrap:anywhere;font-family:var(--body);font-size:14px;line-height:1.5;border-style:solid}
+.demo .creds{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+@media (max-width:480px){.stat b{font-size:20px}.stat{padding:10px}h2{font-size:22px}.card{padding:16px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><div class="logo">S</div><div><h1>StudyMate AI</h1><small id="t-proto">MVP prototype · v0.4</small></div></div>
+    <div class="tools">
+      <span class="acct" id="acct" hidden><button class="iconbtn" id="acct-home" type="button"><span class="who" id="acct-name"></span></button></span>
+      <a class="live" id="live-top" href="https://meet.google.com/zkt-nuif-gcg" target="_blank" rel="noopener"><span class="dot"></span><span id="live-top-text">Live tutor</span></a>
+      <button class="iconbtn" id="theme-btn" type="button">Dark mode</button>
+      <div class="lang" role="group" aria-label="Language"><button id="lang-en" aria-pressed="true">EN</button><button id="lang-ru" aria-pressed="false">RU</button><button id="lang-kk" aria-pressed="false">KZ</button></div>
+    </div>
+  </header>
+  <ol class="rail" id="rail"></ol>
+
+  <!-- auth: sign up / log in / guest -->
+  <section class="card" id="s-auth">
+    <p class="eyebrow" id="t-auth-eyebrow"></p>
+    <h2 id="t-auth-title"></h2>
+    <p class="muted" id="t-auth-text"></p>
+    <div class="tabs" role="tablist"><button id="tab-signup" role="tab" aria-selected="true" type="button"></button><button id="tab-login" role="tab" aria-selected="false" type="button"></button></div>
+    <form id="auth-form" novalidate style="display:flex;flex-direction:column;gap:12px">
+      <label class="f" id="a-name-wrap"><span id="t-a-name"></span><input type="text" id="a-name" autocomplete="name" maxlength="40"></label>
+      <label class="f"><span id="t-a-email"></span><input type="email" id="a-email" autocomplete="email" maxlength="80"></label>
+      <label class="f"><span id="t-a-pass"></span><input type="password" id="a-pass" autocomplete="new-password" maxlength="64"></label>
+      <p class="err" id="a-err" role="alert" hidden></p>
+      <div class="row"><button class="btn" id="a-submit" type="submit"></button><button class="btn ghost" id="a-guest" type="button"></button></div>
+    </form>
+    <div class="demo"><span id="t-a-demo"></span><span class="creds"><code>demo@studymate.kz</code><span>/</span><code>demo1234</code></span><button class="btn ghost sm" id="a-demo-fill" type="button"></button></div>
+    <p class="note" id="t-a-note"></p>
+  </section>
+
+  <!-- home: dashboard for a returning learner -->
+  <section class="card" id="s-home" hidden>
+    <p class="eyebrow" id="t-h-eyebrow"></p>
+    <h2 id="h-title"></h2>
+    <div class="msg" id="h-guest" hidden style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--soft-sel)"><span id="t-h-guest-note" style="flex:1;min-width:200px"></span><button class="btn sm" id="h-make-acct" type="button"></button></div>
+    <div class="stats">
+      <div class="stat"><b id="h-ready">0%</b><span id="t-h-ready"></span></div>
+      <div class="stat"><b id="h-goal">0%</b><span id="t-h-goal"></span></div>
+      <div class="stat"><b id="h-days">–</b><span id="h-days-lbl"></span></div>
+    </div>
+    <div class="meter"><div class="progress"><i id="h-tasks-bar"></i></div><span class="note" id="h-tasks"></span></div>
+    <div class="row"><button class="btn" id="h-continue" type="button"></button><button class="btn sel" id="h-check" type="button"></button></div>
+    <p class="note" id="h-check-note"></p>
+    <div class="sub"><h3 id="t-h-history"></h3><div class="cmp" id="h-history"></div></div>
+    <div class="badges">
+      <div class="stat"><b id="h-xp">0</b><span id="t-h-xp"></span></div>
+      <div class="stat"><b id="h-streak">0</b><span id="t-h-streak"></span></div>
+      <div class="stat"><b id="h-league">–</b><span id="t-h-league"></span></div>
+    </div>
+    <div class="sub"><h3 id="t-sq-title"></h3><p class="muted" id="t-sq-text" style="font-size:14px"></p>
+      <div class="row"><button class="btn ghost" id="sq-invite" type="button"></button></div><p class="msg ok" id="sq-msg" hidden></p></div>
+    <div class="row"><button class="btn ghost" id="h-tiers" type="button"></button><button class="btn ghost" id="h-mentor" type="button"></button><button class="btn ghost" id="h-newgoal" type="button"></button></div>
+    <div class="row" style="justify-content:space-between"><span class="note" id="h-tier-now"></span><button class="iconbtn" id="h-logout" type="button"></button></div>
+  </section>
+
+  <!-- tiers -->
+  <section class="card" id="s-tiers" hidden>
+    <p class="eyebrow" id="t-ti-eyebrow"></p>
+    <h2 id="t-ti-title"></h2>
+    <p class="muted" id="t-ti-note"></p>
+    <div class="tiers" id="tier-list"></div>
+    <p class="msg ok" id="ti-msg" hidden></p>
+    <div class="row"><button class="btn ghost" id="ti-back" type="button"></button></div>
+  </section>
+
+  <!-- mentor hour and reports -->
+  <section class="card" id="s-mentor" hidden>
+    <p class="eyebrow" id="t-m-eyebrow"></p>
+    <h2 id="t-m-title"></h2>
+    <p class="muted" id="t-m-text"></p>
+    <div class="grid2">
+      <label class="f"><span id="t-m-day"></span><select id="m-day"></select></label>
+      <label class="f"><span id="t-m-time"></span><select id="m-time"></select></label>
+    </div>
+    <div class="row"><a class="btn" id="m-cal" href="#" target="_blank" rel="noopener"></a><a class="btn sel" id="m-join" href="https://meet.google.com/zkt-nuif-gcg" target="_blank" rel="noopener"></a></div>
+    <p class="note" id="t-m-concierge"></p>
+    <div class="sub"><h3 id="t-m-sum-title"></h3><p class="muted" id="t-m-sum-note" style="font-size:14px"></p>
+      <label class="f"><span id="t-m-q"></span><input type="text" id="m-q" maxlength="200"></label>
+      <pre class="code sum" id="m-sum" style="max-height:none"></pre>
+      <div class="row"><a class="btn sm" id="m-tg" href="#" target="_blank" rel="noopener"></a><a class="btn ghost sm" id="m-mail" href="#" target="_blank" rel="noopener"></a><button class="btn ghost sm" id="m-copy" type="button"></button></div></div>
+    <div class="sub"><h3 id="t-par-title"></h3><p class="muted" id="t-par-text" style="font-size:14px"></p>
+      <pre class="code sum" id="par-sum" style="max-height:none"></pre>
+      <div class="row"><a class="btn sm" id="par-wa" href="#" target="_blank" rel="noopener"></a><a class="btn ghost sm" id="par-tg" href="#" target="_blank" rel="noopener"></a><a class="btn ghost sm" id="par-mail" href="#" target="_blank" rel="noopener"></a></div></div>
+    <p class="msg ok" id="m-msg" hidden></p>
+    <div class="row"><button class="btn ghost" id="m-back" type="button"></button></div>
+  </section>
+
+  <!-- 0 welcome -->
+  <section class="card" id="s-welcome" hidden>
+    <p class="eyebrow" id="t-w-eyebrow"></p>
+    <h2 id="t-w-title"></h2>
+    <p class="muted" id="t-w-text"></p>
+    <div style="display:flex;flex-direction:column;gap:8px"><b id="t-w-who"></b>
+      <div class="choices" id="role-choices">
+        <button class="choice" data-role="beta" aria-pressed="false"><b id="t-w-beta"></b><span id="t-w-beta2"></span></button>
+        <button class="choice" data-role="alpha" aria-pressed="false"><b id="t-w-alpha"></b><span id="t-w-alpha2"></span></button>
+      </div>
+    </div>
+    <div class="row"><button class="btn" id="go-goal" disabled></button></div>
+  </section>
+
+  <!-- 1 goal -->
+  <section class="card" id="s-goal" hidden>
+    <p class="eyebrow" id="t-g-eyebrow"></p>
+    <h2 id="t-g-title"></h2>
+    <div class="choices" id="seg-choices">
+      <button class="choice" data-seg="unt" aria-pressed="false"><b id="t-g-unt"></b><span id="t-g-unt2"></span></button>
+      <button class="choice" data-seg="uni" aria-pressed="false"><b id="t-g-uni"></b><span id="t-g-uni2"></span></button>
+    </div>
+    <div class="grid2" id="goal-fields" hidden>
+      <label class="f" id="unt-field"><span id="t-g-target"></span><input type="number" id="unt-target" min="50" max="140" value="100"></label>
+      <label class="f" id="uni-field"><span id="t-g-grade"></span>
+        <select id="uni-target"><option value="90">A (90%+)</option><option value="75" selected>B (75%+)</option><option value="60">C (60%+)</option></select></label>
+      <label class="f"><span id="t-g-date"></span><input type="date" id="exam-date"><span class="note" id="g-weeks-out"></span></label>
+    </div>
+    <p class="err" id="g-err" role="alert" hidden></p>
+    <div class="row"><button class="btn" id="go-check" disabled></button></div>
+  </section>
+
+  <!-- 2 check -->
+  <section class="card" id="s-check" hidden>
+    <div class="row" style="justify-content:space-between"><p class="eyebrow" id="t-c-eyebrow"></p><span class="pill" id="q-count">1 / 8</span></div>
+    <div class="progress"><i id="q-progress"></i></div>
+    <p class="muted" id="q-topic"></p>
+    <p class="q" id="q-text"></p>
+    <div class="opts" id="q-opts"></div>
+    <div class="row"><button class="btn" id="q-next" disabled></button></div>
+  </section>
+
+  <!-- 3 result -->
+  <section class="card" id="s-result" hidden>
+    <p class="eyebrow" id="r-eyebrow"></p>
+    <h2 id="r-title"></h2>
+    <div class="sub" id="r-cmp-box" hidden><h3 id="t-r-cmp"></h3><div class="cmp" id="r-cmp"></div><b id="r-cmp-delta"></b><p class="note" id="t-r-cmp-note"></p></div>
+    <div class="meter"><div class="row" style="justify-content:space-between"><span id="t-r-now"></span><span id="t-r-target"></span></div>
+      <div class="bar"><div class="fill" id="r-fill"></div><div class="target" id="r-target"></div></div></div>
+    <div class="stats">
+      <div class="stat"><b id="r-now">0%</b><span id="t-r-s1"></span></div>
+      <div class="stat"><b id="r-goal">0%</b><span id="t-r-s2"></span></div>
+      <div class="stat"><b id="r-gap">0</b><span id="t-r-s3"></span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px"><h3 id="t-r-weak"></h3><ul class="tags" id="r-weak"></ul></div>
+    <div style="display:flex;flex-direction:column;gap:8px"><h3 id="t-r-strong"></h3><ul class="tags" id="r-strong"></ul></div>
+    <div class="sub"><h3 id="t-r-emap"></h3><p class="muted" id="t-r-emap-note"></p><div class="etypes" id="r-emap"></div></div>
+    <div class="sub" id="grant-box" hidden><h3 id="t-grant-title"></h3>
+      <p class="muted" style="font-size:14px"><span id="t-grant-text"></span> <a id="grant-link" href="https://testcenter.kz" target="_blank" rel="noopener">testcenter.kz</a></p>
+      <div class="row" style="align-items:flex-end"><label class="f" style="flex:1;min-width:180px"><span id="t-grant-in"></span><input type="number" id="grant-score" min="50" max="140" inputmode="numeric"></label><button class="btn sel" id="grant-btn" type="button"></button></div>
+      <div id="grant-out"></div></div>
+    <p class="muted" id="t-r-note"></p>
+    <div class="row"><button class="btn" id="go-plan"></button><button class="btn ghost" id="go-ai-result"></button></div>
+  </section>
+
+  <!-- 4 plan -->
+  <section class="card" id="s-plan" hidden>
+    <p class="eyebrow" id="t-p-eyebrow"></p>
+    <h2 id="p-title"></h2>
+    <p class="note" id="p-horizon" hidden></p>
+    <div class="meter"><div class="progress"><i id="p-bar"></i></div><span class="note" id="p-done"></span></div>
+    <div id="p-weeks" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div class="row"><button class="btn" id="go-tutor"></button><button class="btn ghost" id="p-home"></button><button class="btn ghost" id="go-finish-early"></button></div>
+  </section>
+
+  <!-- 5 tutor -->
+  <section class="card" id="s-tutor" hidden>
+    <p class="eyebrow" id="t-t-eyebrow"></p>
+    <h2 id="t-topic"></h2>
+    <p class="q" id="t-q"></p>
+    <div class="opts" id="t-opts"></div>
+    <div id="t-hints" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="t-feedback"></div>
+    <div class="row"><button class="btn ghost" id="t-hint"></button><button class="btn" id="t-check" disabled></button></div>
+    <div class="row"><button class="btn ghost" id="t-ask-ai"></button></div>
+    <div class="sub"><b id="t-terms-title"></b><p class="muted" id="t-terms-note" style="font-size:14px"></p><table class="terms" id="terms-table"></table></div>
+    <div class="sub" id="photo-box">
+      <h3 id="t-ph-title"></h3><p class="muted" id="t-ph-text"></p>
+      <label class="f" id="ph-file-wrap" hidden><span id="t-ph-file"></span><input type="file" id="ph-file" accept="image/jpeg,image/png,image/webp"></label>
+      <textarea id="ph-typed" style="min-height:90px"></textarea>
+      <div class="row"><button class="btn sel" id="ph-check"></button></div>
+      <div id="ph-out"></div>
+    </div>
+    <div class="helpbox">
+      <div class="row" style="justify-content:space-between"><p id="t-stuck"></p><a class="btn sel" id="live-tutor" href="https://meet.google.com/zkt-nuif-gcg" target="_blank" rel="noopener"></a></div>
+      <h3 id="t-tutors-title"></h3><p class="muted" id="t-tutors-demo" style="font-size:13px"></p>
+      <div class="tutors" id="tutor-list"></div>
+    </div>
+    <div class="row"><button class="btn" id="go-teach" disabled></button><button class="btn ghost" id="t-back" type="button"></button></div>
+  </section>
+
+  <!-- 6 teach-back -->
+  <section class="card" id="s-teach" hidden>
+    <p class="eyebrow" id="t-b-eyebrow"></p>
+    <h2 id="b-title"></h2>
+    <p class="muted" id="t-b-text"></p>
+    <label class="f" for="b-text"><span id="t-b-label"></span></label>
+    <textarea id="b-text"></textarea>
+    <div class="row"><button class="btn" id="b-check" disabled></button></div>
+    <div id="b-result" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="score"><div class="ring" id="b-ring"><span id="b-pct">0%</span></div><div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1"><b id="b-verdict"></b><p class="muted" id="b-missing"></p></div></div>
+      <div class="row"><button class="btn ghost" id="b-retry"></button><button class="btn ghost" id="b-plan" type="button"></button><button class="btn" id="go-feedback"></button></div>
+    </div>
+  </section>
+
+  <!-- 7 feedback -->
+  <section class="card" id="s-feedback" hidden>
+    <p class="eyebrow" id="t-f-eyebrow"></p>
+    <h2 id="t-f-title"></h2>
+    <div style="display:flex;flex-direction:column;gap:8px"><b id="t-f-q1"></b><div class="scale" data-key="ease"></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px"><b id="t-f-q2"></b><div class="scale" data-key="useful"></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px"><b id="t-f-q3"></b><div class="choices" data-key="again"></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px"><b id="t-f-q4"></b><div class="choices" data-key="pay"></div></div>
+    <label class="f"><span id="t-f-q5"></span><textarea id="f-comment" style="min-height:90px"></textarea></label>
+    <div class="row"><button class="btn" id="f-send" disabled></button></div>
+  </section>
+
+  <!-- 8 done -->
+  <section class="card" id="s-done" hidden>
+    <p class="eyebrow" id="t-d-eyebrow"></p>
+    <h2 id="t-d-title"></h2>
+    <p class="muted" id="t-d-text"></p>
+    <pre class="code" id="d-code"></pre>
+    <div class="row"><button class="btn" id="d-copy"></button><button class="btn sel" id="d-home" type="button"></button><button class="btn ghost" id="d-restart"></button></div>
+    <p class="msg ok" id="d-copied" hidden></p>
+  </section>
+
+  <div class="footrow"><button class="btn ghost sm" id="open-map" type="button"></button></div>
+  <p class="foot" id="t-foot"></p>
+</div>
+
+<div class="modal" id="map-modal" hidden role="dialog" aria-labelledby="t-map-title">
+  <div class="box">
+    <header><div style="display:flex;flex-direction:column;gap:4px"><p class="eyebrow">StudyMate AI</p><h2 id="t-map-title"></h2><p class="muted" id="t-map-sub"></p></div>
+      <button class="iconbtn" id="map-close" type="button">×</button></header>
+    <ol class="path" id="map-list"></ol>
+  </div>
+</div>
+
+<button class="btn fab" id="ai-fab" type="button"><span class="ai-ico">AI</span><span id="ai-fab-text"></span></button>
+<div class="panel" id="ai-panel" hidden role="dialog" aria-labelledby="t-ai-title">
+  <header><div><b id="t-ai-title"></b><small class="muted" id="t-ai-sub" style="display:block;font-size:12px"></small></div><button class="iconbtn" id="ai-close" type="button">×</button></header>
+  <div class="body" id="ai-body">
+    <div class="chips" id="ai-chips"></div>
+    <div class="chat" id="chat"></div>
+    <div class="msg bad" id="ai-off" hidden><span id="t-ai-off"></span> <a id="ai-off-link" href="https://meet.google.com/zkt-nuif-gcg" target="_blank" rel="noopener"></a></div>
+  </div>
+  <footer><input type="text" id="chat-in"><button class="btn sel" id="chat-send"></button></footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const MEET = "https://meet.google.com/zkt-nuif-gcg";
+/* ---------- content: topics, questions, hints, key ideas (en / ru / kk) ---------- */
+const QB = {
+ unt: [
+  {id:"pct", topic:{en:"Percentages",ru:"Проценты",kk:"Пайыздар"},
+   q:{en:"A price of 8,000 ₸ rises by 15%. What is the new price?",ru:"Цена 8 000 ₸ выросла на 15%. Какая новая цена?",kk:"8 000 ₸ баға 15%-ға өсті. Жаңа баға қанша?"},
+   o:["9,150 ₸","9,200 ₸","9,500 ₸","8,150 ₸"], a:1,
+   h:{en:["15% means 15 hundredths of the price.","Find 15% of 8,000: 8,000 × 0.15 = ?","Add the increase to the old price."],
+      ru:["15% — это 15 сотых от цены.","Найдите 15% от 8 000: 8 000 × 0,15 = ?","Прибавьте рост к старой цене."],
+      kk:["15% — бағаның жүзден 15 бөлігі.","8 000-ның 15%-ын табыңыз: 8 000 × 0,15 = ?","Өсімді бұрынғы бағаға қосыңыз."]},
+   k:[["hundred","/100","сот","per cent","жүз"],["multiply","×","*","умнож","0.15","0,15","көбейт"],["add","plus","прибав","слож","increase","увелич","қос","өсім"],["1.15","1,15","115"]]},
+  {id:"lin", topic:{en:"Linear equations",ru:"Линейные уравнения",kk:"Сызықтық теңдеулер"},
+   q:{en:"Solve: 3x − 7 = 2x + 5",ru:"Решите: 3x − 7 = 2x + 5",kk:"Шешіңіз: 3x − 7 = 2x + 5"}, o:["x = 2","x = 12","x = −2","x = 5"], a:1,
+   h:{en:["Move all x terms to one side.","Subtract 2x from both sides: x − 7 = 5.","Now add 7 to both sides."],
+      ru:["Перенесите все x в одну сторону.","Вычтите 2x из обеих частей: x − 7 = 5.","Теперь прибавьте 7 к обеим частям."],
+      kk:["Барлық x-ті бір жаққа шығарыңыз.","Екі жағынан да 2x алыңыз: x − 7 = 5.","Енді екі жағына да 7 қосыңыз."]},
+   k:[["one side","side","сторон","перенес","move","жаққа","жағына","шығар"],["both","обе","обеих","екі жа"],["sign","знак","opposite","противоп","таңба"],["check","провер","substitut","подстав","тексер","орнына қой"]]},
+  {id:"quad", topic:{en:"Quadratic equations",ru:"Квадратные уравнения",kk:"Квадрат теңдеулер"},
+   q:{en:"Find the roots of x² − 5x + 6 = 0",ru:"Найдите корни x² − 5x + 6 = 0",kk:"x² − 5x + 6 = 0 теңдеуінің түбірлерін табыңыз"},
+   o:[{en:"2 and 3",ru:"2 и 3",kk:"2 және 3"},{en:"−2 and −3",ru:"−2 и −3",kk:"−2 және −3"},{en:"1 and 6",ru:"1 и 6",kk:"1 және 6"},{en:"−1 and 6",ru:"−1 и 6",kk:"−1 және 6"}], a:0,
+   h:{en:["Look for two numbers whose product is 6 and sum is 5.","Or use the discriminant D = b² − 4ac.","D = 25 − 24 = 1, so x = (5 ± 1) / 2."],
+      ru:["Найдите два числа: произведение 6, сумма 5.","Или используйте дискриминант D = b² − 4ac.","D = 25 − 24 = 1, значит x = (5 ± 1) / 2."],
+      kk:["Көбейтіндісі 6, қосындысы 5 болатын екі санды табыңыз.","Немесе дискриминантты қолданыңыз: D = b² − 4ac.","D = 25 − 24 = 1, сондықтан x = (5 ± 1) / 2."]},
+   k:[["discriminant","дискриминант","b²","b^2","4ac"],["vieta","виет","product","произвед","көбейтінді"],["two roots","два корня","roots","корн","түбір"],["2a","±","+-","sqrt","√"]]},
+  {id:"log", topic:{en:"Logarithms",ru:"Логарифмы",kk:"Логарифмдер"},
+   q:{en:"log₂ 32 = ?",ru:"log₂ 32 = ?",kk:"log₂ 32 = ?"}, o:["4","5","6","16"], a:1,
+   h:{en:["log₂ 32 asks: 2 to which power gives 32?","Count: 2, 4, 8, 16, 32.","How many times did you multiply by 2?"],
+      ru:["log₂ 32 спрашивает: в какую степень возвести 2, чтобы получить 32?","Считайте: 2, 4, 8, 16, 32.","Сколько раз вы умножили на 2?"],
+      kk:["log₂ 32 сұрағы: 2-ні қандай дәрежеге шығарсақ, 32 шығады?","Санаңыз: 2, 4, 8, 16, 32.","2-ге неше рет көбейттіңіз?"]},
+   k:[["power","exponent","степен","дәреже"],["base","основан","негіз"],["2^5","2⁵","32"],["inverse","обрат","opposite","кері"]]},
+  {id:"prog", topic:{en:"Arithmetic progression",ru:"Арифметическая прогрессия",kk:"Арифметикалық прогрессия"},
+   q:{en:"Arithmetic progression: a₁ = 3, d = 4. Find a₁₀.",ru:"Арифметическая прогрессия: a₁ = 3, d = 4. Найдите a₁₀.",kk:"Арифметикалық прогрессия: a₁ = 3, d = 4. a₁₀ табыңыз."}, o:["39","43","40","36"], a:0,
+   h:{en:["Each term adds the difference d = 4.","Formula: aₙ = a₁ + (n − 1)·d.","a₁₀ = 3 + 9·4."],
+      ru:["Каждый член прибавляет разность d = 4.","Формула: aₙ = a₁ + (n − 1)·d.","a₁₀ = 3 + 9·4."],
+      kk:["Әр мүшеге d = 4 айырмасы қосылады.","Формула: aₙ = a₁ + (n − 1)·d.","a₁₀ = 3 + 9·4."]},
+   k:[["difference","разност","add","прибав","same number","айырма","қосыл"],["n-1","n − 1","n - 1","(n-1)"],["first","перв","a1","a₁","бірінші"],["formula","формул"]]},
+  {id:"der", topic:{en:"Derivatives",ru:"Производные",kk:"Туындылар"},
+   q:{en:"f(x) = x³ − 2x. Find f′(2).",ru:"f(x) = x³ − 2x. Найдите f′(2).",kk:"f(x) = x³ − 2x. f′(2) табыңыз."}, o:["10","4","12","6"], a:0,
+   h:{en:["The derivative of xⁿ is n·xⁿ⁻¹.","So f′(x) = 3x² − 2.","Substitute x = 2."],
+      ru:["Производная xⁿ равна n·xⁿ⁻¹.","Значит f′(x) = 3x² − 2.","Подставьте x = 2."],
+      kk:["xⁿ туындысы n·xⁿ⁻¹-ге тең.","Демек f′(x) = 3x² − 2.","x = 2 мәнін қойыңыз."]},
+   k:[["power rule","n·x","степен","3x²","3x^2","дәреже"],["constant","констант","−2","-2","тұрақты"],["substitut","plug","подстав","қой"],["slope","rate","скорост","наклон","касательн","tangent","жанама"]]},
+  {id:"trig", topic:{en:"Trigonometry",ru:"Тригонометрия",kk:"Тригонометрия"},
+   q:{en:"sin 30° + cos 60° = ?",ru:"sin 30° + cos 60° = ?",kk:"sin 30° + cos 60° = ?"}, o:["1","0.5","√3","0"], a:0,
+   h:{en:["Use the table of special angles.","sin 30° = 1/2.","cos 60° is also 1/2."],
+      ru:["Используйте таблицу значений для особых углов.","sin 30° = 1/2.","cos 60° тоже равен 1/2."],
+      kk:["Арнайы бұрыштар кестесін пайдаланыңыз.","sin 30° = 1/2.","cos 60° та 1/2-ге тең."]},
+   k:[["1/2","0.5","0,5","half","половин","жарты"],["cos 60","cos60"],["circle","окружн","triangle","треугольн","table","таблиц","шеңбер","үшбұрыш","кесте"],["90","complement","дополн","толықтыр"]]},
+  {id:"geo", topic:{en:"Geometry: right triangles",ru:"Геометрия: прямоугольный треугольник",kk:"Геометрия: тікбұрышты үшбұрыш"},
+   q:{en:"A right triangle has legs 6 and 8. Find the hypotenuse.",ru:"Катеты прямоугольного треугольника 6 и 8. Найдите гипотенузу.",kk:"Тікбұрышты үшбұрыштың катеттері 6 және 8. Гипотенузаны табыңыз."}, o:["10","14","12","9"], a:0,
+   h:{en:["Use the Pythagorean theorem.","c² = a² + b².","c² = 36 + 64 = 100."],
+      ru:["Используйте теорему Пифагора.","c² = a² + b².","c² = 36 + 64 = 100."],
+      kk:["Пифагор теоремасын қолданыңыз.","c² = a² + b².","c² = 36 + 64 = 100."]},
+   k:[["pythagor","пифагор"],["square","квадрат","²","^2"],["sum","сумм","add","слож","қосынды","қос"],["root","корень","sqrt","√","түбір"]]}
+ ],
+ uni: [
+  {id:"lim1", topic:{en:"Limits: sin x / x",ru:"Пределы: sin x / x",kk:"Шектер: sin x / x"},
+   q:{en:"lim (x→0) sin(3x) / x = ?",ru:"lim (x→0) sin(3x) / x = ?",kk:"lim (x→0) sin(3x) / x = ?"}, o:["0","1","3","∞"], a:2,
+   h:{en:["Remember: sin(t)/t → 1 as t → 0.","Write sin(3x)/x = 3 · sin(3x)/(3x).","Let t = 3x."],
+      ru:["Помните: sin(t)/t → 1 при t → 0.","Запишите sin(3x)/x = 3 · sin(3x)/(3x).","Сделайте замену t = 3x."],
+      kk:["Есте сақтаңыз: t → 0 кезде sin(t)/t → 1.","sin(3x)/x = 3 · sin(3x)/(3x) деп жазыңыз.","t = 3x алмастыруын жасаңыз."]},
+   k:[["sin t/t","sin(t)/t","sinx/x","sin(x)/x","sin x / x","замечательн","remarkable","standard limit","тамаша шек"],["t = 3x","t=3x","substitut","замен","алмастыр"],["multiply","умнож","3x","көбейт"],["equals 3","= 3","равен 3","answer is 3","ответ 3","3-ке тең"]]},
+  {id:"lim2", topic:{en:"Limits at infinity",ru:"Пределы на бесконечности",kk:"Шексіздіктегі шектер"},
+   q:{en:"lim (x→∞) (2x² + 1) / (x² − 3) = ?",ru:"lim (x→∞) (2x² + 1) / (x² − 3) = ?",kk:"lim (x→∞) (2x² + 1) / (x² − 3) = ?"}, o:["0","1","2","∞"], a:2,
+   h:{en:["Compare the highest powers.","Divide the top and bottom by x².","1/x² → 0 as x → ∞."],
+      ru:["Сравните старшие степени.","Разделите числитель и знаменатель на x².","1/x² → 0 при x → ∞."],
+      kk:["Ең үлкен дәрежелерді салыстырыңыз.","Алымы мен бөлімін x²-қа бөліңіз.","x → ∞ кезде 1/x² → 0."]},
+   k:[["highest","старш","leading","degree","степен","дәреже"],["divide","раздел","дели","бөл"],["zero","ноль","нулю","→ 0","-> 0","нөл"],["coefficient","коэффициент","ratio","отношен"]]},
+  {id:"prod", topic:{en:"Product rule",ru:"Производная произведения",kk:"Көбейтіндінің туындысы"},
+   q:{en:"d/dx (x² · eˣ) = ?",ru:"d/dx (x² · eˣ) = ?",kk:"d/dx (x² · eˣ) = ?"}, o:["eˣ(x² + 2x)","2x · eˣ","x² · eˣ","2x + eˣ"], a:0,
+   h:{en:["This is a product of two functions.","(uv)′ = u′v + uv′.","u = x², v = eˣ, and (eˣ)′ = eˣ."],
+      ru:["Это произведение двух функций.","(uv)′ = u′v + uv′.","u = x², v = eˣ, и (eˣ)′ = eˣ."],
+      kk:["Бұл екі функцияның көбейтіндісі.","(uv)′ = u′v + uv′.","u = x², v = eˣ, және (eˣ)′ = eˣ."]},
+   k:[["product","произведен","u'v","uv'","u′v","көбейтінді"],["e^x","eˣ","itself","сама","не меня","does not change","өзгермейді","өзіне"],["2x"],["factor","вынес","common","общ","ортақ"]]},
+  {id:"chain", topic:{en:"Chain rule",ru:"Производная сложной функции",kk:"Күрделі функцияның туындысы"},
+   q:{en:"d/dx sin(x²) = ?",ru:"d/dx sin(x²) = ?",kk:"d/dx sin(x²) = ?"}, o:["cos(x²)","2x · cos(x²)","−2x · cos(x²)","2 · sin x"], a:1,
+   h:{en:["This is a composite function: sin of something.","Chain rule: (f(g(x)))′ = f′(g(x)) · g′(x).","Outer: sin → cos; inner: x² → 2x."],
+      ru:["Это сложная функция: синус от чего-то.","Правило: (f(g(x)))′ = f′(g(x)) · g′(x).","Внешняя: sin → cos; внутренняя: x² → 2x."],
+      kk:["Бұл күрделі функция: бір нәрседен алынған синус.","Ереже: (f(g(x)))′ = f′(g(x)) · g′(x).","Сыртқы: sin → cos; ішкі: x² → 2x."]},
+   k:[["chain","цепн","сложн","composite","күрделі"],["outer","внешн","cos","сыртқы"],["inner","внутрен","2x","ішкі"],["multiply","умнож","×","*","көбейт"]]},
+  {id:"int", topic:{en:"Definite integrals",ru:"Определённый интеграл",kk:"Анықталған интеграл"},
+   q:{en:"∫ from 0 to 1 of 2x dx = ?",ru:"∫ от 0 до 1 от 2x dx = ?",kk:"0-ден 1-ге дейін ∫ 2x dx = ?"}, o:["1","2","0.5","0"], a:0,
+   h:{en:["Find an antiderivative of 2x.","It is x².","Compute F(1) − F(0)."],
+      ru:["Найдите первообразную 2x.","Это x².","Вычислите F(1) − F(0)."],
+      kk:["2x-тің алғашқы функциясын табыңыз.","Ол x².","F(1) − F(0) есептеңіз."]},
+   k:[["antiderivative","первообразн","primitive","алғашқы функция"],["f(1)","f(b)","newton","ньютон","лейбниц","upper","lower","верхн","нижн","minus","жоғарғы","төменгі"],["x²","x^2"],["area","площад","аудан"]]},
+  {id:"parts", topic:{en:"Integration by parts",ru:"Интегрирование по частям",kk:"Бөліктеп интегралдау"},
+   q:{en:"∫ x · eˣ dx = ?",ru:"∫ x · eˣ dx = ?",kk:"∫ x · eˣ dx = ?"}, o:["eˣ(x − 1) + C","x · eˣ + C","eˣ(x + 1) + C","x²eˣ/2 + C"], a:0,
+   h:{en:["Use integration by parts: ∫u dv = uv − ∫v du.","Choose u = x and dv = eˣ dx.","Then du = dx and v = eˣ."],
+      ru:["Интегрирование по частям: ∫u dv = uv − ∫v du.","Выберите u = x и dv = eˣ dx.","Тогда du = dx и v = eˣ."],
+      kk:["Бөліктеп интегралдау: ∫u dv = uv − ∫v du.","u = x және dv = eˣ dx деп таңдаңыз.","Сонда du = dx және v = eˣ."]},
+   k:[["by parts","по частям","uv","бөліктеп"],["u = x","u=x","choose","выбра","таңда"],["v = e","v=e","eˣ","e^x"],["+ c","+c","constant","констант","тұрақты"]]},
+  {id:"ext", topic:{en:"Extrema",ru:"Экстремумы",kk:"Экстремумдар"},
+   q:{en:"f(x) = x³ − 3x. Where is the local maximum?",ru:"f(x) = x³ − 3x. Где локальный максимум?",kk:"f(x) = x³ − 3x. Жергілікті максимум қай нүктеде?"}, o:["x = −1","x = 1","x = 0","x = 3"], a:0,
+   h:{en:["Find f′(x) and set it equal to 0.","f′(x) = 3x² − 3 = 0, so x = ±1.","Check the sign of f′ around each point, or use f″."],
+      ru:["Найдите f′(x) и приравняйте к 0.","f′(x) = 3x² − 3 = 0, значит x = ±1.","Проверьте знак f′ около каждой точки или используйте f″."],
+      kk:["f′(x) табып, оны 0-ге теңестіріңіз.","f′(x) = 3x² − 3 = 0, демек x = ±1.","Әр нүктенің маңында f′ таңбасын тексеріңіз немесе f″ қолданыңыз."]},
+   k:[["derivative","производн","туынды"],["critical","критическ","стационар","= 0","=0","критикалық"],["sign","знак","second","втор","f''","f″","таңба","екінші"],["increas","возраст","decreas","убыв","plus to minus","с плюса","өсе","кеми"]]},
+  {id:"part", topic:{en:"Partial derivatives",ru:"Частные производные",kk:"Дербес туындылар"},
+   q:{en:"f(x, y) = x²y + 3y. Find ∂f/∂x.",ru:"f(x, y) = x²y + 3y. Найдите ∂f/∂x.",kk:"f(x, y) = x²y + 3y. ∂f/∂x табыңыз."}, o:["2xy","x² + 3","2x + 3","x²"], a:0,
+   h:{en:["A partial derivative treats the other variables as constants.","Here y is a constant.","x²y gives 2xy; 3y has no x."],
+      ru:["В частной производной другие переменные — константы.","Здесь y — константа.","x²y даёт 2xy; в 3y нет x."],
+      kk:["Дербес туындыда басқа айнымалылар тұрақты деп саналады.","Мұнда y — тұрақты.","x²y-тен 2xy шығады; 3y-те x жоқ."]},
+   k:[["constant","констант","fixed","фиксир","тұрақты"],["respect to x","по x","only x","по иксу","x бойынша"],["3y","zero","ноль","исчеза","disappear","vanish","нөл","жойыл"],["2xy"]]}
+ ]
+};
+/* Bank B: new questions on the same 8 topics, in the same order, for the progress check (topic names and Teach-back key ideas come from bank A) */
+const QB2 = {
+ unt: [
+  {id:"pct", q:{en:"A jacket costs 12,000 ₸ and is discounted by 25%. What is the new price?",ru:"Куртка стоит 12 000 ₸, скидка 25%. Какая новая цена?",kk:"Күртеше 12 000 ₸ тұрады, жеңілдік 25%. Жаңа баға қанша?"},
+   o:["8,500 ₸","9,000 ₸","3,000 ₸","9,500 ₸"], a:1,
+   h:{en:["25% is one quarter of the price.","12,000 × 0.25 = 3,000.","Subtract the discount from the old price."],ru:["25% — это четверть цены.","12 000 × 0,25 = 3 000.","Вычтите скидку из старой цены."],kk:["25% — бағаның төрттен бірі.","12 000 × 0,25 = 3 000.","Жеңілдікті бұрынғы бағадан алыңыз."]}},
+  {id:"lin", q:{en:"Solve: 5x + 4 = 2x + 19",ru:"Решите: 5x + 4 = 2x + 19",kk:"Шешіңіз: 5x + 4 = 2x + 19"}, o:["x = −5","x = 3","x = 5","x = 23/7"], a:2,
+   h:{en:["Subtract 2x from both sides.","Now 3x + 4 = 19.","Subtract 4, then divide by 3."],ru:["Вычтите 2x из обеих частей.","Получится 3x + 4 = 19.","Вычтите 4, затем разделите на 3."],kk:["Екі жағынан да 2x алыңыз.","Енді 3x + 4 = 19.","4-ті алып, 3-ке бөліңіз."]}},
+  {id:"quad", q:{en:"Find the roots of x² + x − 12 = 0",ru:"Найдите корни x² + x − 12 = 0",kk:"x² + x − 12 = 0 теңдеуінің түбірлерін табыңыз"},
+   o:[{en:"−3 and 4",ru:"−3 и 4",kk:"−3 және 4"},{en:"3 and −4",ru:"3 и −4",kk:"3 және −4"},{en:"2 and −6",ru:"2 и −6",kk:"2 және −6"},{en:"3 and 4",ru:"3 и 4",kk:"3 және 4"}], a:1,
+   h:{en:["Look for two numbers with product −12 and sum −1.","Or D = b² − 4ac = 1 + 48 = 49.","x = (−1 ± 7) / 2."],ru:["Найдите два числа: произведение −12, сумма −1.","Или D = b² − 4ac = 1 + 48 = 49.","x = (−1 ± 7) / 2."],kk:["Көбейтіндісі −12, қосындысы −1 болатын екі санды табыңыз.","Немесе D = b² − 4ac = 1 + 48 = 49.","x = (−1 ± 7) / 2."]}},
+  {id:"log", q:{en:"log₃ 81 = ?",ru:"log₃ 81 = ?",kk:"log₃ 81 = ?"}, o:["3","27","4","9"], a:2,
+   h:{en:["3 to which power gives 81?","Count: 3, 9, 27, 81.","How many times did you multiply by 3?"],ru:["В какую степень возвести 3, чтобы получить 81?","Считайте: 3, 9, 27, 81.","Сколько раз вы умножили на 3?"],kk:["3-ті қандай дәрежеге шығарсақ, 81 шығады?","Санаңыз: 3, 9, 27, 81.","3-ке неше рет көбейттіңіз?"]}},
+  {id:"prog", q:{en:"Arithmetic progression: a₁ = 7, d = −2. Find a₈.",ru:"Арифметическая прогрессия: a₁ = 7, d = −2. Найдите a₈.",kk:"Арифметикалық прогрессия: a₁ = 7, d = −2. a₈ табыңыз."}, o:["−9","−5","9","−7"], a:3,
+   h:{en:["d is negative, so the terms go down by 2.","aₙ = a₁ + (n − 1)·d.","a₈ = 7 + 7·(−2)."],ru:["d отрицательная, члены уменьшаются на 2.","aₙ = a₁ + (n − 1)·d.","a₈ = 7 + 7·(−2)."],kk:["d теріс, сондықтан мүшелер 2-ге кемиді.","aₙ = a₁ + (n − 1)·d.","a₈ = 7 + 7·(−2)."]}},
+  {id:"der", q:{en:"f(x) = 2x² + 3x. Find f′(1).",ru:"f(x) = 2x² + 3x. Найдите f′(1).",kk:"f(x) = 2x² + 3x. f′(1) табыңыз."}, o:["5","7","4","10"], a:1,
+   h:{en:["The derivative of xⁿ is n·xⁿ⁻¹.","f′(x) = 4x + 3.","Substitute x = 1."],ru:["Производная xⁿ равна n·xⁿ⁻¹.","f′(x) = 4x + 3.","Подставьте x = 1."],kk:["xⁿ туындысы n·xⁿ⁻¹.","f′(x) = 4x + 3.","x = 1 мәнін қойыңыз."]}},
+  {id:"trig", q:{en:"cos 0° + sin 90° = ?",ru:"cos 0° + sin 90° = ?",kk:"cos 0° + sin 90° = ?"}, o:["1","0","√2","2"], a:3,
+   h:{en:["Use the unit circle or the table of special angles.","cos 0° = 1.","sin 90° is also 1."],ru:["Используйте единичную окружность или таблицу углов.","cos 0° = 1.","sin 90° тоже равен 1."],kk:["Бірлік шеңберді немесе бұрыштар кестесін пайдаланыңыз.","cos 0° = 1.","sin 90° та 1-ге тең."]}},
+  {id:"geo", q:{en:"A right triangle has hypotenuse 13 and one leg 5. Find the other leg.",ru:"Гипотенуза прямоугольного треугольника 13, один катет 5. Найдите другой катет.",kk:"Тікбұрышты үшбұрыштың гипотенузасы 13, бір катеті 5. Екінші катетті табыңыз."}, o:["8","12","18","√194"], a:1,
+   h:{en:["Use the Pythagorean theorem: a² + b² = c².","b² = 13² − 5² = 169 − 25.","b² = 144."],ru:["Теорема Пифагора: a² + b² = c².","b² = 13² − 5² = 169 − 25.","b² = 144."],kk:["Пифагор теоремасы: a² + b² = c².","b² = 13² − 5² = 169 − 25.","b² = 144."]}}
+ ],
+ uni: [
+  {id:"lim1", q:{en:"lim (x→0) sin(5x) / (2x) = ?",ru:"lim (x→0) sin(5x) / (2x) = ?",kk:"lim (x→0) sin(5x) / (2x) = ?"}, o:["1","5/2","0","2/5"], a:1,
+   h:{en:["sin(t)/t → 1 as t → 0.","Write sin(5x)/(2x) = (5/2) · sin(5x)/(5x).","Let t = 5x."],ru:["sin(t)/t → 1 при t → 0.","Запишите sin(5x)/(2x) = (5/2) · sin(5x)/(5x).","Сделайте замену t = 5x."],kk:["t → 0 кезде sin(t)/t → 1.","sin(5x)/(2x) = (5/2) · sin(5x)/(5x) деп жазыңыз.","t = 5x алмастыруын жасаңыз."]}},
+  {id:"lim2", q:{en:"lim (x→∞) (3x + 2) / (6x − 1) = ?",ru:"lim (x→∞) (3x + 2) / (6x − 1) = ?",kk:"lim (x→∞) (3x + 2) / (6x − 1) = ?"}, o:["3","0","∞","1/2"], a:3,
+   h:{en:["Compare the highest powers: both are x.","Divide the top and bottom by x.","2/x and 1/x → 0."],ru:["Сравните старшие степени: обе x.","Разделите числитель и знаменатель на x.","2/x и 1/x → 0."],kk:["Ең үлкен дәрежелерді салыстырыңыз: екеуі де x.","Алымы мен бөлімін x-ке бөліңіз.","2/x және 1/x → 0."]}},
+  {id:"prod", q:{en:"d/dx (x · ln x) = ?",ru:"d/dx (x · ln x) = ?",kk:"d/dx (x · ln x) = ?"}, o:["ln x + 1","1/x","ln x","x + 1/x"], a:0,
+   h:{en:["This is a product of x and ln x.","(uv)′ = u′v + uv′.","(ln x)′ = 1/x, and x · 1/x = 1."],ru:["Это произведение x и ln x.","(uv)′ = u′v + uv′.","(ln x)′ = 1/x, а x · 1/x = 1."],kk:["Бұл x пен ln x көбейтіндісі.","(uv)′ = u′v + uv′.","(ln x)′ = 1/x, ал x · 1/x = 1."]}},
+  {id:"chain", q:{en:"d/dx (2x + 1)⁵ = ?",ru:"d/dx (2x + 1)⁵ = ?",kk:"d/dx (2x + 1)⁵ = ?"}, o:["5(2x + 1)⁴","10(2x + 1)⁴","(2x + 1)⁴","10(2x + 1)⁵"], a:1,
+   h:{en:["Outer function: u⁵, inner: 2x + 1.","(u⁵)′ = 5u⁴.","Multiply by the inner derivative, 2."],ru:["Внешняя функция u⁵, внутренняя 2x + 1.","(u⁵)′ = 5u⁴.","Умножьте на производную внутренней функции, 2."],kk:["Сыртқы функция u⁵, ішкі функция 2x + 1.","(u⁵)′ = 5u⁴.","Ішкі функцияның туындысына, 2-ге көбейтіңіз."]}},
+  {id:"int", q:{en:"∫ from 1 to 2 of 3x² dx = ?",ru:"∫ от 1 до 2 от 3x² dx = ?",kk:"1-ден 2-ге дейін ∫ 3x² dx = ?"}, o:["8","9","3","7"], a:3,
+   h:{en:["An antiderivative of 3x² is x³.","Compute F(2) − F(1).","8 − 1 = ?"],ru:["Первообразная 3x² — это x³.","Вычислите F(2) − F(1).","8 − 1 = ?"],kk:["3x²-тің алғашқы функциясы — x³.","F(2) − F(1) есептеңіз.","8 − 1 = ?"]}},
+  {id:"parts", q:{en:"∫ x · cos x dx = ?",ru:"∫ x · cos x dx = ?",kk:"∫ x · cos x dx = ?"}, o:["x·sin x − cos x + C","x·sin x + cos x + C","−x·sin x + C","sin x + C"], a:1,
+   h:{en:["∫u dv = uv − ∫v du, with u = x and dv = cos x dx.","Then du = dx and v = sin x.","∫ sin x dx = −cos x, so the signs give + cos x."],ru:["∫u dv = uv − ∫v du, где u = x и dv = cos x dx.","Тогда du = dx и v = sin x.","∫ sin x dx = −cos x, поэтому получится + cos x."],kk:["∫u dv = uv − ∫v du, мұнда u = x және dv = cos x dx.","Сонда du = dx және v = sin x.","∫ sin x dx = −cos x, сондықтан + cos x шығады."]}},
+  {id:"ext", q:{en:"f(x) = x² − 4x + 1. Where is the minimum?",ru:"f(x) = x² − 4x + 1. Где минимум?",kk:"f(x) = x² − 4x + 1. Минимум қай нүктеде?"}, o:["x = −2","x = 4","x = 1","x = 2"], a:3,
+   h:{en:["Set f′(x) = 0.","f′(x) = 2x − 4.","f″(x) = 2 > 0, so it is a minimum."],ru:["Приравняйте f′(x) к 0.","f′(x) = 2x − 4.","f″(x) = 2 > 0, значит это минимум."],kk:["f′(x)-ті 0-ге теңестіріңіз.","f′(x) = 2x − 4.","f″(x) = 2 > 0, демек бұл минимум."]}},
+  {id:"part", q:{en:"f(x, y) = 3xy² + y. Find ∂f/∂y.",ru:"f(x, y) = 3xy² + y. Найдите ∂f/∂y.",kk:"f(x, y) = 3xy² + y. ∂f/∂y табыңыз."}, o:["3y²","6xy","6xy + 1","3xy + 1"], a:2,
+   h:{en:["Treat x as a constant.","3xy² gives 6xy.","y gives 1."],ru:["Считайте x константой.","3xy² даёт 6xy.","y даёт 1."],kk:["x-ті тұрақты деп санаңыз.","3xy²-тен 6xy шығады.","y-тен 1 шығады."]}}
+ ]
+};
+/* term bridge: [EN, RU, KZ] */
+const TERMS = {
+ pct:[["percent","процент","пайыз"],["increase","увеличение","өсім"],["of the price","от цены","бағаның"]],
+ lin:[["linear equation","линейное уравнение","сызықтық теңдеу"],["both sides","обе части","екі жағы"],["solution / root","решение / корень","шешім / түбір"]],
+ quad:[["quadratic equation","квадратное уравнение","квадрат теңдеу"],["root","корень","түбір"],["discriminant","дискриминант","дискриминант"]],
+ log:[["logarithm","логарифм","логарифм"],["base","основание","негіз"],["power, exponent","степень","дәреже"]],
+ prog:[["arithmetic progression","арифметическая прогрессия","арифметикалық прогрессия"],["common difference","разность","айырма"],["term","член","мүше"]],
+ der:[["derivative","производная","туынды"],["power rule","производная степени","дәреженің туындысы"],["tangent","касательная","жанама"]],
+ trig:[["sine","синус","синус"],["cosine","косинус","косинус"],["angle","угол","бұрыш"]],
+ geo:[["right triangle","прямоугольный треугольник","тікбұрышты үшбұрыш"],["leg","катет","катет"],["hypotenuse","гипотенуза","гипотенуза"]],
+ lim1:[["limit","предел","шек"],["substitution","замена","алмастыру"],["tends to zero","стремится к нулю","нөлге ұмтылады"]],
+ lim2:[["infinity","бесконечность","шексіздік"],["numerator","числитель","алым"],["denominator","знаменатель","бөлім"]],
+ prod:[["product rule","производная произведения","көбейтіндінің туындысы"],["factor","множитель","көбейткіш"],["exponential function","показательная функция","көрсеткіштік функция"]],
+ chain:[["chain rule","правило сложной функции","күрделі функцияның туындысы"],["composite function","сложная функция","күрделі функция"],["inner function","внутренняя функция","ішкі функция"]],
+ int:[["definite integral","определённый интеграл","анықталған интеграл"],["antiderivative","первообразная","алғашқы функция"],["limits of integration","пределы интегрирования","интегралдау шектері"]],
+ parts:[["integration by parts","интегрирование по частям","бөліктеп интегралдау"],["constant of integration","константа интегрирования","интегралдау тұрақтысы"],["indefinite integral","неопределённый интеграл","анықталмаған интеграл"]],
+ ext:[["local maximum","локальный максимум","жергілікті максимум"],["critical point","критическая точка","критикалық нүкте"],["second derivative","вторая производная","екінші туынды"]],
+ part:[["partial derivative","частная производная","дербес туынды"],["variable","переменная","айнымалы"],["constant","константа","тұрақты"]]
+};
+/* tutors ranked by students' growth — example data for the prototype */
+const SUBJ = { unt:{en:"UNT profile maths",ru:"Профильная математика ЕНТ",kk:"ҰБТ бейіндік математика"}, uni:{en:"Calculus, Year 1–2",ru:"Матанализ, 1–2 курс",kk:"Матанализ, 1–2 курс"} };
+const TUTORS = [
+ {id:"t1", seg:"unt", name:{en:"Aigerim S.",ru:"Айгерим С.",kk:"Әйгерім С."}, langs:"KZ · RU", g:18, s:24},
+ {id:"t2", seg:"unt", name:{en:"Yerlan B.",ru:"Ерлан Б.",kk:"Ерлан Б."}, langs:"KZ", g:13, s:37},
+ {id:"t3", seg:"unt", name:{en:"Madina T.",ru:"Мадина Т.",kk:"Мадина Т."}, langs:"RU", g:9, s:15},
+ {id:"t4", seg:"uni", name:{en:"Daniyar K.",ru:"Данияр К.",kk:"Данияр К."}, langs:"RU · EN", g:15, s:31},
+ {id:"t5", seg:"uni", name:{en:"Aliya N.",ru:"Алия Н.",kk:"Әлия Н."}, langs:"KZ · EN", g:12, s:19},
+ {id:"t6", seg:"uni", name:{en:"Timur A.",ru:"Тимур А.",kk:"Тимур А."}, langs:"RU", g:8, s:22}
+];
+/* User's Path Map: 6 stages, pain and the answer in the prototype; later = not built in this MVP */
+const PATH_UI = {
+ en:{btn:"User's Path Map", title:"User's Path Map", sub:"How a student moves through StudyMate AI, the pain at each stage and what answers it in this prototype.", pain:"Pain:", proto:"In the prototype:", here:"You are here", later:"Partly later"},
+ ru:{btn:"Карта пути пользователя", title:"Карта пути пользователя", sub:"Как ученик проходит через StudyMate AI, какая боль на каждом этапе и что отвечает на неё в этом прототипе.", pain:"Боль:", proto:"В прототипе:", here:"Вы здесь", later:"Частично позже"},
+ kk:{btn:"Пайдаланушы жолының картасы", title:"Пайдаланушы жолының картасы", sub:"Оқушы StudyMate AI арқылы қалай өтеді, әр кезеңде қандай мәселе бар және бұл прототипте оған не жауап береді.", pain:"Мәселе:", proto:"Прототипте:", here:"Сіз осындасыз", later:"Ішінара кейін"}
+};
+const PATH = [
+ {name:{en:"Awareness",ru:"Узнаёт о нас",kk:"Бізді білу"},
+  pain:{en:"Too many courses; does not trust AI answers.",ru:"Слишком много курсов; не доверяет ответам ИИ.",kk:"Курстар тым көп; ЖИ жауаптарына сенбейді."},
+  feat:{en:"A shared link and a free Goal Check as the hook.",ru:"Ссылка от друга и бесплатный Goal Check как точка входа.",kk:"Достан келген сілтеме және кіру нүктесі ретінде тегін Goal Check."}},
+ {name:{en:"First contact",ru:"Первый контакт",kk:"Алғашқы байланыс"},
+  pain:{en:"No time for long sign-ups.",ru:"Нет времени на долгую регистрацию.",kk:"Ұзақ тіркелуге уақыт жоқ."},
+  feat:{en:"Sign up in three fields, log in, or continue as a guest; then choose the goal and exam date in under a minute, in KZ, RU or EN.",ru:"Регистрация в три поля, вход или продолжение как гость; затем цель и дата экзамена за минуту, на KZ, RU или EN.",kk:"Үш жолмен тіркелу, кіру немесе қонақ ретінде жалғастыру; содан кейін мақсат пен емтихан күнін бір минутта таңдау, KZ, RU немесе EN тілінде."}},
+ {name:{en:"First value",ru:"Первая ценность",kk:"Алғашқы құндылық"},
+  pain:{en:"Does not know own gaps or why points are lost.",ru:"Не знает своих пробелов и почему теряет баллы.",kk:"Өз олқылықтарын және ұпайды неге жоғалтатынын білмейді."},
+  feat:{en:"8-question Goal Check, readiness score, weak topics and the error map.",ru:"Goal Check из 8 вопросов, готовность, слабые темы и карта ошибок.",kk:"8 сұрақтық Goal Check, дайындық, әлсіз тақырыптар және қателер картасы."}},
+ {name:{en:"Regular use",ru:"Регулярное использование",kk:"Тұрақты қолдану"},
+  pain:{en:"Chatbots give answers without understanding; school and university in different languages; nobody to ask in the evening.",ru:"Чат-боты дают ответы без понимания; школа и вуз на разных языках; вечером не у кого спросить.",kk:"Чат-боттар түсіндірмей жауап береді; мектеп пен ЖОО әр тілде; кешке сұрайтын адам жоқ."},
+  feat:{en:"Dashboard with saved progress, weekly plan, hint tutor for every plan topic, term bridge, photo mistake finder, AI helper, live tutor on Google Meet, Teach-back.",ru:"Личный кабинет с сохранённым прогрессом, план по неделям, репетитор с подсказками по каждой теме плана, мост терминов, «Где я ошибся?», ИИ-помощник, живой репетитор в Google Meet, Teach-back.",kk:"Сақталған прогресі бар жеке кабинет, апталық жоспар, жоспардың әр тақырыбы бойынша кеңес беретін репетитор, терминдер көпірі, «Қай жерде қателестім?», ЖИ-көмекші, Google Meet-тегі онлайн репетитор, Teach-back."}},
+ {name:{en:"Payment",ru:"Оплата",kk:"Төлем"}, later:true,
+  pain:{en:"Tutors are expensive; parents pay.",ru:"Репетиторы дорогие; платят родители.",kk:"Репетиторлар қымбат; ата-аналар төлейді."},
+  feat:{en:"Plan choice: Free, Standard 4,000 ₸ or Premium + Mentor 10,000 ₸ a month; tutors ranked by student growth. Online payment is not connected yet.",ru:"Выбор тарифа: Free, Standard 4 000 ₸ или Premium + Mentor 10 000 ₸ в месяц; репетиторы по росту учеников. Онлайн-оплата пока не подключена.",kk:"Тариф таңдау: Free, Standard 4 000 ₸ немесе Premium + Mentor айына 10 000 ₸; репетиторлар оқушыларының өсімі бойынша. Онлайн төлем әзірге қосылмаған."}},
+ {name:{en:"Long-term use and referral",ru:"Долгое использование и рекомендации",kk:"Ұзақ қолдану және ұсыну"}, later:true,
+  pain:{en:"Motivation fades when studying alone.",ru:"Мотивация падает, когда учишься один.",kk:"Жалғыз оқығанда мотивация төмендейді."},
+  feat:{en:"Progress checks with new questions and a before/after view, points and streaks, invites to a Study Squad, weekly Mentor Hour, summaries for the mentor and parents. Squad leaderboards come later.",ru:"Проверки прогресса с новыми вопросами и сравнением «до/после», баллы и серии дней, приглашения в Study Squad, еженедельный Mentor Hour, сводки для ментора и родителей. Рейтинг команд появится позже.",kk:"Жаңа сұрақтармен прогресті тексеру және «бұрын/кейін» салыстыру, ұпайлар мен күндер сериясы, Study Squad-қа шақыру, апталық Mentor Hour, ментор мен ата-анаға арналған есеп. Командалар рейтингі кейін қосылады."}}
+];
+const STAGE_OF = {"s-auth":1,"s-home":3,"s-tiers":4,"s-mentor":5,"s-welcome":1,"s-goal":1,"s-check":2,"s-result":2,"s-plan":3,"s-tutor":3,"s-teach":3,"s-feedback":4,"s-done":5};
+const T = {
+ en:{proto:"MVP prototype · v0.3", live:"Live tutor", live_title:"Join a live tutor on Google Meet", dark:"Dark mode", light:"Light mode",
+  rail:["Goal","Check","Plan","Tutor","Teach-back"],
+  w_eyebrow:"Your goal, your plan", w_title:"Find out what you don't know yet, and get a weekly plan to your goal",
+  w_text:"A free 10-minute Goal Check: 8 questions, an honest readiness score, a personal plan, a tutor that gives hints instead of answers, and Teach-back to prove you understood.",
+  w_who:"Who is testing?", w_beta:"I am a student", w_beta2:"Grade 11 or university Year 1–2", w_alpha:"Team or friend", w_alpha2:"Testing for the StudyMate team",
+  start:"Start the Goal Check", g_eyebrow:"Step 1 · Goal Navigator", g_title:"What are you preparing for?", g_unt:"UNT, Grade 11", g_unt2:"Profile maths for a state grant",
+  g_uni:"University, Year 1–2", g_uni2:"Calculus exam session", g_target:"Target UNT score (out of 140)", g_grade:"Target exam grade", g_weeks:"Weeks until the exam", go_check:"Start 8 questions",
+  c_eyebrow:"Step 2 · Goal Check", next:"Next", finish:"See my result", idk:"I don't know yet",
+  r_eyebrow:"Step 3 · Your result", r_title_gap:(g)=>`You are ${g} points away from your goal`, r_title_ok:"You are already at your goal level", r_now:"Readiness now", r_target:"Target",
+  r_s1:"readiness now", r_s2:"needed for your goal", r_s3:"points to close", r_weak:"Topics to work on", r_strong:"Already strong", r_none:"None yet",
+  r_note:"Readiness is an estimate from 8 questions, not an official UNT or exam score.", go_plan:"Build my weekly plan",
+  p_eyebrow:"Step 4 · Weekly plan", p_title:(w)=>`Your ${w}-week plan`, week:"Week", p_learn:(t)=>`Learn ${t} with the tutor (20 min)`, p_practice:"Solve 5 practice tasks", p_teach:"Teach-back: explain it in your own words",
+  p_review:"Review all topics and take a new Goal Check", p_mixed:"Mixed practice: 10 tasks on your weak topics + one Teach-back", p_mock:"Timed mock test", go_tutor:"Study the first topic now", skip:"Skip to feedback",
+  t_eyebrow:"Step 5 · Tutor: hints, not answers", hint:"Give me a hint", no_more:"No more hints. Try your answer.", check:"Check my answer",
+  right:"Correct. You found it yourself.", wrong:"Not yet. Take a hint and try again.", stuck:"Still stuck? A tutor is online now and will explain it with you.", stuck_btn:"Call a live tutor",
+  ai_title:"Ask the AI tutor", ai_ph:"Ask about this topic", ask:"Ask",
+  thinking:"Thinking…", ai_err:"The AI tutor is not available right now. Use the hints above or call a live tutor.", go_teach:"Next: Teach-back",
+  b_eyebrow:"Step 6 · Teach-back", b_title:(t)=>`Explain “${t}” to a confused classmate`, b_text:"Explain the idea to a confused classmate in 3–5 sentences, in your own words. Say what to do and why.",
+  b_label:"Your explanation", b_ph:"For example: first I… because…", b_check:"Check my explanation", retry:"Try again", go_fb:"Finish and give feedback",
+  b_pass:"You understand this topic. Marked as mastered.", b_mid:"Good start. Add the missing ideas.", b_low:"Not clear yet. Look at the hints again, then explain.",
+  b_missing:"Missing ideas:", b_allgood:"You covered the key ideas.",
+  f_eyebrow:"Last step · Your feedback", f_title:"Help us improve StudyMate", f_q1:"How easy was it to use? (1 = very hard, 5 = very easy)", f_q2:"How useful is the plan and Teach-back for you? (1–5)",
+  f_q3:"Would you use StudyMate again next week?", f_q4:"Would you (or your parents) pay 4,000 ₸ a month for it?", f_q5:"What should we change? (optional)",
+  yes:"Yes", maybe:"Maybe", no:"No", f_send:"Get my result code",
+  d_eyebrow:"Thank you", d_title:"Send this code to the StudyMate team", d_text:"Copy the code and paste it into the feedback form or the Telegram chat the team gave you. It contains your answers and results, no name or contacts.",
+  copy:"Copy code", copied:"Copied", copy_fail:"Select the code and copy it manually.", restart:"Start again",
+  foot:"Prototype for an Astana IT University student project (CS-2420). Results are estimates.",
+  r_emap:"Why you lose points", r_emap_note:"Based on your answers and the time you spent on each question.",
+  et:{gap:"Don't know the topic yet", mis:"Wrong method", care:"Rushed or careless", slow:"Right, but too slow"},
+  ea:{gap:"Learn the topic from zero with the tutor", mis:"Redo the method step by step, then Teach-back", care:"Slow down and check every answer by substitution", slow:"Timed practice on the same topics"},
+  ai_result:"Ask AI to explain my result", ai_result_q:"Explain my Goal Check result and what I should start with.",
+  terms_title:"Term bridge KZ · RU · EN", terms_note:"The same idea in three languages, for when school was in one language and university is in another.",
+  ph_title:"Where did I go wrong?", ph_text:"Take a photo of your handwritten solution or type your steps. The AI finds the line with the mistake, without solving the problem for you.",
+  ph_file:"Photo of your solution", ph_typed:"…or type your steps here", ph_check:"Find my mistake", ph_ok:"Your solution is correct.", ph_bad:"Mistake found", ph_unclear:"I could not read the solution clearly.", ph_hint:"What to try:",
+  ph_need:"Add a photo or type your steps first.", ph_noai:"This check needs the AI, which works when the prototype is opened in Claude. For now, call a live tutor.", ph_noimg:"Photo upload is not available here, so type your steps instead.",
+  tutors_title:"Choose a tutor by results", tutors_demo:"Example data for the prototype. Tutors are ranked by how much their students improve, not by stars.",
+  t_growth:(n)=>`+${n} pts`, t_growth_lbl:"average student growth", t_students:(n)=>`${n} students`, t_call:"Call",
+  ask_task:"Ask AI about this problem", ask_task_q:"Give me a first hint for this problem, without the answer.",
+  ai_name:"AI helper", ai_sub:"powered by Claude", close:"Close", chips:["Explain it more simply","Explain in Kazakh with English terms","Give me a similar problem","What should I study first?"],
+  ai_off:"The AI helper works when the prototype is opened in Claude. Right now you can use the hints or", ai_hello:"Hi! Ask me about your topic, your result or your plan. I give hints, not ready answers.",
+  p_care:"Accuracy: solve 5 tasks and check each answer by substitution", p_slow:"Speed: 10 tasks on a timer, 2 minutes each"},
+ ru:{proto:"Прототип MVP · v0.3", live:"Живой репетитор", live_title:"Подключиться к репетитору в Google Meet", dark:"Тёмная тема", light:"Светлая тема",
+  rail:["Цель","Проверка","План","Репетитор","Teach-back"],
+  w_eyebrow:"Ваша цель, ваш план", w_title:"Узнайте, чего вы ещё не знаете, и получите план по неделям к своей цели",
+  w_text:"Бесплатный Goal Check за 10 минут: 8 вопросов, честная оценка готовности, личный план, репетитор с подсказками вместо готовых ответов и Teach-back, чтобы доказать, что вы поняли.",
+  w_who:"Кто тестирует?", w_beta:"Я ученик или студент", w_beta2:"11 класс или 1–2 курс университета", w_alpha:"Команда или друг", w_alpha2:"Тестирую для команды StudyMate",
+  start:"Начать Goal Check", g_eyebrow:"Шаг 1 · Goal Navigator", g_title:"К чему вы готовитесь?", g_unt:"ЕНТ, 11 класс", g_unt2:"Профильная математика на грант",
+  g_uni:"Университет, 1–2 курс", g_uni2:"Экзамен по матанализу", g_target:"Целевой балл ЕНТ (из 140)", g_grade:"Целевая оценка на экзамене", g_weeks:"Недель до экзамена", go_check:"Начать 8 вопросов",
+  c_eyebrow:"Шаг 2 · Goal Check", next:"Далее", finish:"Посмотреть результат", idk:"Пока не знаю",
+  r_eyebrow:"Шаг 3 · Ваш результат", r_title_gap:(g)=>`До вашей цели не хватает ${g} пунктов`, r_title_ok:"Вы уже на уровне своей цели", r_now:"Готовность сейчас", r_target:"Цель",
+  r_s1:"готовность сейчас", r_s2:"нужно для цели", r_s3:"пунктов закрыть", r_weak:"Темы для работы", r_strong:"Уже хорошо", r_none:"Пока нет",
+  r_note:"Готовность — оценка по 8 вопросам, а не официальный балл ЕНТ или экзамена.", go_plan:"Составить план по неделям",
+  p_eyebrow:"Шаг 4 · План по неделям", p_title:(w)=> w===4 ? "Ваш план на 4 недели" : `Ваш план на ${w} недель`, week:"Неделя", p_learn:(t)=>`Разобрать тему «${t}» с репетитором (20 мин)`, p_practice:"Решить 5 тренировочных задач", p_teach:"Teach-back: объяснить своими словами",
+  p_review:"Повторить все темы и пройти новый Goal Check", p_mixed:"Смешанная практика: 10 задач по слабым темам + один Teach-back", p_mock:"Пробный тест на время", go_tutor:"Начать первую тему", skip:"Перейти к отзыву",
+  t_eyebrow:"Шаг 5 · Репетитор: подсказки, а не ответы", hint:"Дать подсказку", no_more:"Подсказок больше нет. Попробуйте ответить.", check:"Проверить ответ",
+  right:"Верно. Вы нашли ответ сами.", wrong:"Пока нет. Возьмите подсказку и попробуйте ещё раз.", stuck:"Всё ещё непонятно? Репетитор сейчас онлайн и разберёт тему вместе с вами.", stuck_btn:"Позвать живого репетитора",
+  ai_title:"Спросить ИИ-репетитора", ai_ph:"Вопрос по этой теме", ask:"Спросить",
+  thinking:"Думаю…", ai_err:"ИИ-репетитор сейчас недоступен. Используйте подсказки выше или позовите живого репетитора.", go_teach:"Далее: Teach-back",
+  b_eyebrow:"Шаг 6 · Teach-back", b_title:(t)=>`Объясните тему «${t}» запутавшемуся однокласснику`, b_text:"Объясните идею запутавшемуся однокласснику в 3–5 предложениях своими словами. Скажите, что делать и почему.",
+  b_label:"Ваше объяснение", b_ph:"Например: сначала я… потому что…", b_check:"Проверить объяснение", retry:"Попробовать снова", go_fb:"Завершить и оставить отзыв",
+  b_pass:"Вы понимаете эту тему. Отмечена как освоенная.", b_mid:"Хорошее начало. Добавьте недостающие идеи.", b_low:"Пока непонятно. Посмотрите подсказки ещё раз и объясните.",
+  b_missing:"Не хватает идей:", b_allgood:"Вы назвали ключевые идеи.",
+  f_eyebrow:"Последний шаг · Ваш отзыв", f_title:"Помогите нам улучшить StudyMate", f_q1:"Насколько легко было пользоваться? (1 = очень сложно, 5 = очень легко)", f_q2:"Насколько полезны план и Teach-back для вас? (1–5)",
+  f_q3:"Воспользуетесь StudyMate снова на следующей неделе?", f_q4:"Заплатили бы вы (или родители) 4 000 ₸ в месяц?", f_q5:"Что нам изменить? (необязательно)",
+  yes:"Да", maybe:"Возможно", no:"Нет", f_send:"Получить код результата",
+  d_eyebrow:"Спасибо", d_title:"Отправьте этот код команде StudyMate", d_text:"Скопируйте код и вставьте его в форму отзыва или в Telegram-чат, который дала команда. В нём ваши ответы и результаты, без имени и контактов.",
+  copy:"Скопировать код", copied:"Скопировано", copy_fail:"Выделите код и скопируйте вручную.", restart:"Начать заново",
+  foot:"Прототип студенческого проекта Astana IT University (CS-2420). Результаты — оценка.",
+  r_emap:"Почему вы теряете баллы", r_emap_note:"По вашим ответам и времени на каждый вопрос.",
+  et:{gap:"Тема ещё не изучена", mis:"Ошибка в способе решения", care:"Спешка или невнимательность", slow:"Верно, но слишком медленно"},
+  ea:{gap:"Разобрать тему с нуля с репетитором", mis:"Повторить способ по шагам, затем Teach-back", care:"Не спешить и проверять каждый ответ подстановкой", slow:"Практика на время по тем же темам"},
+  ai_result:"Попросить ИИ объяснить мой результат", ai_result_q:"Объясни мой результат Goal Check и с чего мне начать.",
+  terms_title:"Мост терминов KZ · RU · EN", terms_note:"Одна идея на трёх языках: если в школе учились на одном языке, а в вузе учитесь на другом.",
+  ph_title:"Где я ошибся?", ph_text:"Сфотографируйте решение от руки или напишите шаги. ИИ найдёт строку с ошибкой и не будет решать задачу за вас.",
+  ph_file:"Фото решения", ph_typed:"…или напишите шаги здесь", ph_check:"Найти ошибку", ph_ok:"Ваше решение верное.", ph_bad:"Ошибка найдена", ph_unclear:"Не удалось разобрать решение.", ph_hint:"Что попробовать:",
+  ph_need:"Сначала добавьте фото или напишите шаги.", ph_noai:"Для этой проверки нужен ИИ, он работает, когда прототип открыт в Claude. Пока можно позвать живого репетитора.", ph_noimg:"Загрузка фото здесь недоступна, напишите шаги текстом.",
+  tutors_title:"Выберите репетитора по результатам", tutors_demo:"Пример данных для прототипа. Репетиторы отсортированы по росту их учеников, а не по звёздам.",
+  t_growth:(n)=>`+${n} баллов`, t_growth_lbl:"средний рост учеников", t_students:(n)=>`${n} учеников`, t_call:"Позвать",
+  ask_task:"Спросить ИИ про эту задачу", ask_task_q:"Дай первую подсказку к этой задаче, без ответа.",
+  ai_name:"ИИ-помощник", ai_sub:"на базе Claude", close:"Закрыть", chips:["Объясни проще","Объясни на казахском, термины на английском","Дай похожую задачу","Что учить в первую очередь?"],
+  ai_off:"ИИ-помощник работает, когда прототип открыт в Claude. Сейчас можно использовать подсказки или", ai_hello:"Привет! Спросите про тему, результат или план. Я даю подсказки, а не готовые ответы.",
+  p_care:"Точность: решить 5 задач и проверить каждый ответ подстановкой", p_slow:"Скорость: 10 задач на время, по 2 минуты"},
+ kk:{proto:"MVP прототипі · v0.3", live:"Онлайн репетитор", live_title:"Google Meet арқылы репетиторға қосылу", dark:"Қараңғы режим", light:"Жарық режим",
+  rail:["Мақсат","Тексеру","Жоспар","Репетитор","Teach-back"],
+  w_eyebrow:"Сіздің мақсатыңыз, сіздің жоспарыңыз", w_title:"Нені әлі білмейтініңізді анықтап, мақсатқа дейінгі апталық жоспар алыңыз",
+  w_text:"10 минуттық тегін Goal Check: 8 сұрақ, дайындығыңыздың шынайы бағасы, жеке жоспар, дайын жауаптың орнына кеңес беретін репетитор және түсінгеніңізді дәлелдейтін Teach-back.",
+  w_who:"Кім тестілеп жатыр?", w_beta:"Мен оқушы немесе студентпін", w_beta2:"11-сынып немесе университеттің 1–2 курсы", w_alpha:"Команда немесе дос", w_alpha2:"StudyMate командасы үшін тестілеймін",
+  start:"Goal Check бастау", g_eyebrow:"1-қадам · Goal Navigator", g_title:"Неге дайындалып жүрсіз?", g_unt:"ҰБТ, 11-сынып", g_unt2:"Грантқа арналған бейіндік математика",
+  g_uni:"Университет, 1–2 курс", g_uni2:"Математикалық анализ емтиханы", g_target:"Мақсатты ҰБТ балы (140-тан)", g_grade:"Емтихандағы мақсатты баға", g_weeks:"Емтиханға дейін қанша апта", go_check:"8 сұрақты бастау",
+  c_eyebrow:"2-қадам · Goal Check", next:"Келесі", finish:"Нәтижені көру", idk:"Әзірге білмеймін",
+  r_eyebrow:"3-қадам · Сіздің нәтижеңіз", r_title_gap:(g)=>`Мақсатыңызға дейін ${g} пункт жетпейді`, r_title_ok:"Сіз мақсат деңгейіне жеттіңіз", r_now:"Қазіргі дайындық", r_target:"Мақсат",
+  r_s1:"қазіргі дайындық", r_s2:"мақсатқа қажет", r_s3:"жабу керек пункт", r_weak:"Жұмыс істеу керек тақырыптар", r_strong:"Жақсы меңгерілген", r_none:"Әзірге жоқ",
+  r_note:"Дайындық 8 сұрақ бойынша есептелген болжам, ресми ҰБТ немесе емтихан балы емес.", go_plan:"Апталық жоспар құру",
+  p_eyebrow:"4-қадам · Апталық жоспар", p_title:(w)=>`${w} аптаға арналған жоспарыңыз`, week:"Апта", p_learn:(t)=>`«${t}» тақырыбын репетитормен өту (20 мин)`, p_practice:"5 жаттығу есебін шығару", p_teach:"Teach-back: өз сөзіңізбен түсіндіру",
+  p_review:"Барлық тақырыпты қайталап, жаңа Goal Check тапсыру", p_mixed:"Аралас жаттығу: әлсіз тақырыптар бойынша 10 есеп + бір Teach-back", p_mock:"Уақытпен сынақ тест", go_tutor:"Бірінші тақырыпты бастау", skip:"Пікір беруге өту",
+  t_eyebrow:"5-қадам · Репетитор: жауап емес, кеңес", hint:"Кеңес беру", no_more:"Басқа кеңес жоқ. Жауап беріп көріңіз.", check:"Жауапты тексеру",
+  right:"Дұрыс. Жауапты өзіңіз таптыңыз.", wrong:"Әзірге дұрыс емес. Кеңес алып, қайта көріңіз.", stuck:"Әлі түсініксіз бе? Репетитор қазір онлайн, тақырыпты сізбен бірге талдайды.", stuck_btn:"Онлайн репетиторды шақыру",
+  ai_title:"ЖИ-репетитордан сұрау", ai_ph:"Осы тақырып бойынша сұрақ", ask:"Сұрау",
+  thinking:"Ойланып жатырмын…", ai_err:"ЖИ-репетитор қазір қолжетімсіз. Жоғарыдағы кеңестерді пайдаланыңыз немесе онлайн репетиторды шақырыңыз.", go_teach:"Келесі: Teach-back",
+  b_eyebrow:"6-қадам · Teach-back", b_title:(t)=>`«${t}» тақырыбын шатасқан сыныптасыңызға түсіндіріңіз`, b_text:"Идеяны шатасқан сыныптасыңызға 3–5 сөйлеммен, өз сөзіңізбен түсіндіріңіз. Не істеу керек және неге екенін айтыңыз.",
+  b_label:"Сіздің түсіндірмеңіз", b_ph:"Мысалы: алдымен мен… себебі…", b_check:"Түсіндірмені тексеру", retry:"Қайта көру", go_fb:"Аяқтап, пікір қалдыру",
+  b_pass:"Сіз бұл тақырыпты түсінесіз. Меңгерілді деп белгіленді.", b_mid:"Жақсы бастама. Жетіспейтін идеяларды қосыңыз.", b_low:"Әзірге түсініксіз. Кеңестерді қайта қарап, түсіндіріңіз.",
+  b_missing:"Жетіспейтін идеялар:", b_allgood:"Сіз негізгі идеяларды атадыңыз.",
+  f_eyebrow:"Соңғы қадам · Сіздің пікіріңіз", f_title:"StudyMate-ті жақсартуға көмектесіңіз", f_q1:"Қолдану қаншалықты оңай болды? (1 = өте қиын, 5 = өте оңай)", f_q2:"Жоспар мен Teach-back сізге қаншалықты пайдалы? (1–5)",
+  f_q3:"Келесі аптада StudyMate-ті қайта қолданасыз ба?", f_q4:"Сіз (немесе ата-анаңыз) айына 4 000 ₸ төлер ме едіңіз?", f_q5:"Нені өзгертуіміз керек? (міндетті емес)",
+  yes:"Иә", maybe:"Мүмкін", no:"Жоқ", f_send:"Нәтиже кодын алу",
+  d_eyebrow:"Рақмет", d_title:"Осы кодты StudyMate командасына жіберіңіз", d_text:"Кодты көшіріп, команда берген пікір формасына немесе Telegram-чатқа қойыңыз. Онда сіздің жауаптарыңыз бен нәтижелеріңіз бар, аты-жөніңіз бен байланыс деректеріңіз жоқ.",
+  copy:"Кодты көшіру", copied:"Көшірілді", copy_fail:"Кодты белгілеп, қолмен көшіріңіз.", restart:"Қайта бастау",
+  foot:"Astana IT University студенттік жобасының прототипі (CS-2420). Нәтижелер болжамды.",
+  r_emap:"Ұпайды неге жоғалтасыз", r_emap_note:"Жауаптарыңыз бен әр сұраққа жұмсаған уақытыңыз бойынша.",
+  et:{gap:"Тақырып әлі оқылмаған", mis:"Шешу тәсілінде қате", care:"Асығыстық немесе зейінсіздік", slow:"Дұрыс, бірақ тым баяу"},
+  ea:{gap:"Тақырыпты репетитормен басынан өту", mis:"Тәсілді қадам бойынша қайталап, Teach-back жасау", care:"Асықпай, әр жауапты орнына қойып тексеру", slow:"Сол тақырыптар бойынша уақытпен жаттығу"},
+  ai_result:"Нәтижемді ЖИ-ден түсіндіруді сұрау", ai_result_q:"Goal Check нәтижемді түсіндіріп, неден бастау керегін айт.",
+  terms_title:"Терминдер көпірі KZ · RU · EN", terms_note:"Бір идея үш тілде: мектепте бір тілде, университетте басқа тілде оқысаңыз.",
+  ph_title:"Қай жерде қателестім?", ph_text:"Қолмен жазған шешіміңізді суретке түсіріңіз немесе қадамдарды жазыңыз. ЖИ қате тұрған жолды табады, бірақ есепті сіз үшін шешпейді.",
+  ph_file:"Шешімнің суреті", ph_typed:"…немесе қадамдарды осында жазыңыз", ph_check:"Қатені табу", ph_ok:"Шешіміңіз дұрыс.", ph_bad:"Қате табылды", ph_unclear:"Шешімді анық оқу мүмкін болмады.", ph_hint:"Не істеп көру керек:",
+  ph_need:"Алдымен сурет қосыңыз немесе қадамдарды жазыңыз.", ph_noai:"Бұл тексеруге ЖИ керек, ол прототип Claude ішінде ашылғанда жұмыс істейді. Әзірге онлайн репетиторды шақыруға болады.", ph_noimg:"Мұнда сурет жүктеу қолжетімсіз, қадамдарды мәтінмен жазыңыз.",
+  tutors_title:"Репетиторды нәтижесі бойынша таңдаңыз", tutors_demo:"Прототипке арналған мысал деректер. Репетиторлар жұлдызша бойынша емес, оқушыларының өсімі бойынша реттелген.",
+  t_growth:(n)=>`+${n} балл`, t_growth_lbl:"оқушылардың орташа өсімі", t_students:(n)=>`${n} оқушы`, t_call:"Шақыру",
+  ask_task:"Осы есеп туралы ЖИ-ден сұрау", ask_task_q:"Осы есепке жауабын айтпай, бірінші кеңес бер.",
+  ai_name:"ЖИ-көмекші", ai_sub:"Claude негізінде", close:"Жабу", chips:["Қарапайымырақ түсіндір","Қазақша түсіндір, терминдерді ағылшынша бер","Ұқсас есеп бер","Алдымен нені оқу керек?"],
+  ai_off:"ЖИ-көмекші прототип Claude ішінде ашылғанда жұмыс істейді. Қазір кеңестерді пайдалануға болады немесе", ai_hello:"Сәлем! Тақырып, нәтиже немесе жоспар туралы сұраңыз. Мен дайын жауап емес, кеңес беремін.",
+  p_care:"Дәлдік: 5 есеп шығарып, әр жауапты орнына қойып тексеру", p_slow:"Жылдамдық: уақытпен 10 есеп, әрқайсысына 2 минут"}
+};
+/* v0.4 strings: accounts, dashboard, progress check, grant chance, plans, Mentor Hour, reports, squad */
+const T2 = {
+ en:{proto:"MVP prototype · v0.4",
+  auth_eyebrow:"Welcome to StudyMate AI", auth_title:"Create an account or log in",
+  auth_text:"An account keeps your goal, plan and progress. You can also start as a guest and create an account later without losing progress.",
+  tab_signup:"Sign up", tab_login:"Log in", a_name:"Your name", a_email:"Email", a_pass:"Password (at least 6 characters)", a_pass_login:"Password",
+  a_signup:"Create account", a_login:"Log in", a_guest:"Continue as a guest", a_demo:"Test account:", a_demo_fill:"Use it",
+  a_note:"Prototype: accounts are stored only in this browser on this device, with no server. The password is saved as a salted hash, not as text.",
+  err_name:"Enter your name (2–40 characters).", err_email:"Enter a valid email, for example name@mail.kz.", err_pass:"The password must have at least 6 characters.",
+  err_exists:"This email already has an account on this device. Log in instead.", err_nouser:"There is no account with this email on this device. Check the email or sign up.", err_wrong:"Wrong password. Try again.",
+  guest:"Guest", logout:"Log out",
+  h_eyebrow:"Your dashboard", h_title:(n)=>`Welcome back, ${n}`, h_title_guest:"Your dashboard",
+  h_guest_note:"You are using StudyMate as a guest. Create an account to keep your progress under your email.", h_make_acct:"Create an account",
+  h_ready:"readiness now", h_goal:"needed for your goal", h_days:"days to the exam", h_nodate:"set the exam date",
+  h_tasks:(d,t)=>`${d} of ${t} plan tasks done`, h_continue:"Continue my plan", h_check:"Take a progress check",
+  h_check_due:"A progress check is due: see how much you have grown.", h_check_in:(d)=>`Next progress check recommended in ${d} ${d===1?"day":"days"}.`,
+  h_history:"Your progress", h_check_lbl:(i,d)=>`Check ${i} · ${d}`,
+  h_xp:"points", h_streak:"day streak", h_league:"league", leagues:["Bronze","Silver","Gold"],
+  h_tiers:"Plans and prices", h_mentor:"Mentor Hour and reports", h_newgoal:"Change my goal", h_tier_now:(n)=>`My plan: ${n}`,
+  sq_title:"Study Squad", sq_text:"Studying with friends keeps motivation up. Invite a classmate to the free Goal Check and study the same topics together. Squad leaderboards come later.",
+  sq_btn:"Invite a friend", sq_shared:"Invite sent. +10 points.", sq_copied:"Invite copied. Paste it in Telegram or WhatsApp. +10 points.",
+  invite:(n)=>`${n} invites you to StudyMate AI: a free 10-minute Goal Check for UNT maths or calculus, with a weekly plan and a tutor that gives hints, not answers.`,
+  g_date:"Exam date", g_weeks_out:(w)=>`${w} ${w===1?"week":"weeks"} until the exam`, err_target:"Enter a target score from 50 to 140.", err_date:"Choose an exam date in the future, within one year.",
+  c_eyebrow_b:"Progress check · new questions", r_eyebrow:"Step 3 · Your result", r_eyebrow_b:"Progress check · Your result",
+  r_cmp:"Before and after", r_cmp_delta:(d)=> d>0 ? `+${d} points of readiness` : d<0 ? `${d} points of readiness` : "No change yet",
+  r_cmp_note:"The progress check uses new questions on the same topics, so growth does not come from remembering answers.",
+  grant_title:"Grant chance (rough estimate)", grant_text:"Enter last year's minimum grant score for your specialty. It is published by the National Testing Center:",
+  grant_in:"Last year's grant score (out of 140)", grant_btn:"Estimate", err_grant:"Enter a score from 50 to 140.",
+  grant_est:(s)=>`If your other UNT subjects are at the same level, your score would be about ${s} out of 140.`,
+  grant_hi:"Good chance: you are above last year's grant score.", grant_mid:"Borderline: you are within 10 points of last year's grant score.", grant_lo:"Low chance for now: close your weak topics first.",
+  grant_note:"This is not an official forecast. Grant scores change every year, and the check covers only profile maths.",
+  p_horizon:(w,h)=>`Your exam is in ${w} weeks. This plan covers the next ${h}; take a progress check to update it.`,
+  p_study:"Study", p_mastered:"Mastered", p_progress:"Progress check: new questions on your topics", p_done:(d,t)=>`${d} of ${t} tasks done`,
+  go_tutor:"Start with the first topic", p_home:"My dashboard", t_back:"Back to my plan", b_plan:"Back to my plan", d_home:"Go to my dashboard",
+  ti_eyebrow:"Plans", ti_title:"Choose the plan that fits you", ti_note:"Pilot: online payment is not connected yet, and every plan is free while we test. We record the plan you choose to check demand.",
+  ti_names:["Free","Standard","Premium + Mentor"], ti_month:"₸ / month", ti_choose:"Choose", ti_chosen:"Your plan", ti_back:"Back to my dashboard",
+  ti_feats:[["Goal Check and weekly plan","Tutor with hints and the term bridge","Teach-back","AI helper: 5 questions a day"],
+            ["Everything in Free","AI helper without a daily limit","“Where did I go wrong?” photo check","Progress checks and a weekly parent report"],
+            ["Everything in Standard","Mentor Hour: 20 minutes a week on Google Meet with a student mentor who passed the same exam","Your weekly summary goes to the mentor before the call","Live tutor first in line"]],
+  ti_saved:(n)=>`Saved: ${n}. Thank you, this helps us check our prices.`,
+  m_eyebrow:"Mentor Hour and reports", m_title:"Your weekly Mentor Hour",
+  m_text:"A student mentor who passed the same exam meets you for 20 minutes a week on Google Meet. Before the call the mentor gets your weekly summary, so no time is lost on explaining where you are.",
+  m_day:"Day", m_time:"Time", days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+  m_cal:"Add to Google Calendar (every week)", m_join:"Join the Mentor Hour", cal_title:"StudyMate Mentor Hour",
+  m_concierge:"Pilot: after you send the summary, the team matches you with a mentor by hand and confirms the time in Telegram.",
+  m_sum_title:"Weekly summary for your mentor", m_sum_note:"Built from your checks, plan and Teach-back. Read it, add a question and send it.", m_q:"Question for your mentor (optional)",
+  m_tg:"Send in Telegram", m_mail:"Send by email", m_copy:"Copy", m_copied:"Copied.",
+  par_title:"Report for parents", par_text:"A short report your parents can read in a minute: progress, effort and the next step.", par_wa:"Send in WhatsApp", par_tg:"Telegram", par_mail:"Email",
+  m_back:"Back to my dashboard",
+  s_head:(n)=>`StudyMate AI · weekly summary · ${n}`, s_par_head:(n)=>`StudyMate AI · ${n}'s progress this week`,
+  s_goal:"Goal", s_exam:"Exam", s_ready:"Readiness", s_mastered:"Mastered (Teach-back 70%+)", s_weak:"To work on", s_tasks:"Plan tasks done", s_err:"Main reason for lost points",
+  s_q:"Question", s_none:"none yet", s_next:"Next step", s_unt:(t)=>`UNT, ${t} of 140`, s_uni:(t)=>`calculus exam, ${t}%+`, s_streak:(d)=>`${d}-day study streak`,
+  ai_sub_by:(x)=>`powered by ${x}`, ai_off:"The AI helper is not connected on this copy of the prototype. Right now you can use the hints or",
+  ph_noai:"This check needs the AI helper, which is not connected on this copy of the prototype. For now, call a live tutor.", ai_limit:"The AI helper is busy. Wait a minute and try again."},
+ ru:{proto:"Прототип MVP · v0.4",
+  auth_eyebrow:"Добро пожаловать в StudyMate AI", auth_title:"Создайте аккаунт или войдите",
+  auth_text:"Аккаунт сохраняет вашу цель, план и прогресс. Можно начать как гость и создать аккаунт позже, прогресс не потеряется.",
+  tab_signup:"Регистрация", tab_login:"Вход", a_name:"Ваше имя", a_email:"Email", a_pass:"Пароль (не меньше 6 символов)", a_pass_login:"Пароль",
+  a_signup:"Создать аккаунт", a_login:"Войти", a_guest:"Продолжить как гость", a_demo:"Тестовый аккаунт:", a_demo_fill:"Подставить",
+  a_note:"Прототип: аккаунты хранятся только в этом браузере на этом устройстве, без сервера. Пароль сохраняется как хеш с солью, а не текстом.",
+  err_name:"Введите имя (2–40 символов).", err_email:"Введите корректный email, например name@mail.kz.", err_pass:"Пароль должен быть не короче 6 символов.",
+  err_exists:"На этом устройстве уже есть аккаунт с этим email. Войдите в него.", err_nouser:"На этом устройстве нет аккаунта с этим email. Проверьте email или зарегистрируйтесь.", err_wrong:"Неверный пароль. Попробуйте ещё раз.",
+  guest:"Гость", logout:"Выйти",
+  h_eyebrow:"Личный кабинет", h_title:(n)=>`С возвращением, ${n}`, h_title_guest:"Личный кабинет",
+  h_guest_note:"Вы пользуетесь StudyMate как гость. Создайте аккаунт, чтобы прогресс сохранился за вашим email.", h_make_acct:"Создать аккаунт",
+  h_ready:"готовность сейчас", h_goal:"нужно для цели", h_days:"дней до экзамена", h_nodate:"укажите дату экзамена",
+  h_tasks:(d,t)=>`Выполнено задач плана: ${d} из ${t}`, h_continue:"Продолжить план", h_check:"Пройти проверку прогресса",
+  h_check_due:"Пора пройти проверку прогресса: посмотрите, насколько вы выросли.", h_check_in:(d)=>`Следующая проверка прогресса рекомендуется через ${d} дн.`,
+  h_history:"Ваш прогресс", h_check_lbl:(i,d)=>`Проверка ${i} · ${d}`,
+  h_xp:"баллы", h_streak:"дней подряд", h_league:"лига", leagues:["Бронза","Серебро","Золото"],
+  h_tiers:"Тарифы и цены", h_mentor:"Mentor Hour и отчёты", h_newgoal:"Изменить цель", h_tier_now:(n)=>`Мой тариф: ${n}`,
+  sq_title:"Study Squad", sq_text:"С друзьями мотивация держится дольше. Пригласите одноклассника на бесплатный Goal Check и учите одни темы вместе. Рейтинг команд появится позже.",
+  sq_btn:"Пригласить друга", sq_shared:"Приглашение отправлено. +10 баллов.", sq_copied:"Приглашение скопировано. Вставьте его в Telegram или WhatsApp. +10 баллов.",
+  invite:(n)=>`${n} приглашает вас в StudyMate AI: бесплатный Goal Check за 10 минут по математике ЕНТ или матанализу, план по неделям и репетитор, который даёт подсказки, а не ответы.`,
+  g_date:"Дата экзамена", g_weeks_out:(w)=>`До экзамена недель: ${w}`, err_target:"Введите целевой балл от 50 до 140.", err_date:"Выберите дату экзамена в будущем, не позже чем через год.",
+  c_eyebrow_b:"Проверка прогресса · новые вопросы", r_eyebrow:"Шаг 3 · Ваш результат", r_eyebrow_b:"Проверка прогресса · Ваш результат",
+  r_cmp:"До и после", r_cmp_delta:(d)=> d>0 ? `+${d} пунктов готовности` : d<0 ? `${d} пунктов готовности` : "Пока без изменений",
+  r_cmp_note:"В проверке прогресса новые вопросы по тем же темам, поэтому рост не связан с запоминанием ответов.",
+  grant_title:"Шанс на грант (грубая оценка)", grant_text:"Введите минимальный балл на грант по вашей специальности за прошлый год. Его публикует Национальный центр тестирования:",
+  grant_in:"Грантовый балл прошлого года (из 140)", grant_btn:"Оценить", err_grant:"Введите балл от 50 до 140.",
+  grant_est:(s)=>`Если остальные предметы ЕНТ на таком же уровне, ваш балл будет около ${s} из 140.`,
+  grant_hi:"Хороший шанс: вы выше прошлогоднего грантового балла.", grant_mid:"На границе: вы в пределах 10 баллов от прошлогоднего грантового балла.", grant_lo:"Пока шанс низкий: сначала закройте слабые темы.",
+  grant_note:"Это не официальный прогноз. Грантовые баллы меняются каждый год, а проверка охватывает только профильную математику.",
+  p_horizon:(w,h)=>`До экзамена недель: ${w}. План охватывает ближайшие ${h}; пройдите проверку прогресса, чтобы обновить его.`,
+  p_study:"Учить", p_mastered:"Освоено", p_progress:"Проверка прогресса: новые вопросы по вашим темам", p_done:(d,t)=>`Выполнено ${d} из ${t}`,
+  go_tutor:"Начать с первой темы", p_home:"Личный кабинет", t_back:"Назад к плану", b_plan:"Назад к плану", d_home:"Перейти в личный кабинет",
+  ti_eyebrow:"Тарифы", ti_title:"Выберите подходящий тариф", ti_note:"Пилот: онлайн-оплата пока не подключена, на время тестирования все тарифы бесплатны. Мы записываем выбранный тариф, чтобы проверить спрос.",
+  ti_names:["Free","Standard","Premium + Mentor"], ti_month:"₸ / мес", ti_choose:"Выбрать", ti_chosen:"Ваш тариф", ti_back:"Назад в кабинет",
+  ti_feats:[["Goal Check и план по неделям","Репетитор с подсказками и мост терминов","Teach-back","ИИ-помощник: 5 вопросов в день"],
+            ["Всё из Free","ИИ-помощник без дневного лимита","Фото-проверка «Где я ошибся?»","Проверки прогресса и еженедельный отчёт родителям"],
+            ["Всё из Standard","Mentor Hour: 20 минут в неделю в Google Meet со студентом-ментором, который сдал тот же экзамен","Ваша недельная сводка приходит ментору до звонка","Живой репетитор без очереди"]],
+  ti_saved:(n)=>`Сохранено: ${n}. Спасибо, это помогает нам проверить цены.`,
+  m_eyebrow:"Mentor Hour и отчёты", m_title:"Ваш еженедельный Mentor Hour",
+  m_text:"Студент-ментор, который сдал тот же экзамен, занимается с вами 20 минут в неделю в Google Meet. До звонка ментор получает вашу недельную сводку, поэтому время не уходит на объяснения, где вы сейчас.",
+  m_day:"День", m_time:"Время", days:["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"],
+  m_cal:"Добавить в Google Календарь (каждую неделю)", m_join:"Подключиться к Mentor Hour", cal_title:"StudyMate Mentor Hour",
+  m_concierge:"Пилот: после отправки сводки команда вручную подбирает вам ментора и подтверждает время в Telegram.",
+  m_sum_title:"Недельная сводка для ментора", m_sum_note:"Собрана из ваших проверок, плана и Teach-back. Прочитайте, добавьте вопрос и отправьте.", m_q:"Вопрос ментору (необязательно)",
+  m_tg:"Отправить в Telegram", m_mail:"Отправить по email", m_copy:"Скопировать", m_copied:"Скопировано.",
+  par_title:"Отчёт для родителей", par_text:"Короткий отчёт, который родители прочитают за минуту: прогресс, усилия и следующий шаг.", par_wa:"Отправить в WhatsApp", par_tg:"Telegram", par_mail:"Email",
+  m_back:"Назад в кабинет",
+  s_head:(n)=>`StudyMate AI · недельная сводка · ${n}`, s_par_head:(n)=>`StudyMate AI · прогресс за неделю · ${n}`,
+  s_goal:"Цель", s_exam:"Экзамен", s_ready:"Готовность", s_mastered:"Освоено (Teach-back 70%+)", s_weak:"Нужно подтянуть", s_tasks:"Выполнено задач плана", s_err:"Главная причина потери баллов",
+  s_q:"Вопрос", s_none:"пока нет", s_next:"Следующий шаг", s_unt:(t)=>`ЕНТ, ${t} из 140`, s_uni:(t)=>`экзамен по матанализу, ${t}%+`, s_streak:(d)=>`занимается ${d} дн. подряд`,
+  ai_sub_by:(x)=>`на базе ${x}`, ai_off:"ИИ-помощник не подключён в этой копии прототипа. Сейчас можно использовать подсказки или",
+  ph_noai:"Для этой проверки нужен ИИ-помощник, а он не подключён в этой копии прототипа. Пока можно позвать живого репетитора.", ai_limit:"ИИ-помощник занят. Подождите минуту и попробуйте снова."},
+ kk:{proto:"MVP прототипі · v0.4",
+  auth_eyebrow:"StudyMate AI-ға қош келдіңіз", auth_title:"Аккаунт ашыңыз немесе кіріңіз",
+  auth_text:"Аккаунт мақсатыңызды, жоспарыңызды және прогресіңізді сақтайды. Қонақ ретінде бастап, аккаунтты кейін ашуға болады, прогресс жоғалмайды.",
+  tab_signup:"Тіркелу", tab_login:"Кіру", a_name:"Атыңыз", a_email:"Email", a_pass:"Құпиясөз (кемінде 6 таңба)", a_pass_login:"Құпиясөз",
+  a_signup:"Аккаунт ашу", a_login:"Кіру", a_guest:"Қонақ ретінде жалғастыру", a_demo:"Тест аккаунты:", a_demo_fill:"Қою",
+  a_note:"Прототип: аккаунттар серверсіз, тек осы құрылғыдағы осы браузерде сақталады. Құпиясөз мәтін ретінде емес, тұзды хеш ретінде сақталады.",
+  err_name:"Атыңызды енгізіңіз (2–40 таңба).", err_email:"Дұрыс email енгізіңіз, мысалы name@mail.kz.", err_pass:"Құпиясөз кемінде 6 таңбадан тұруы керек.",
+  err_exists:"Бұл құрылғыда осы email-мен аккаунт бар. Соған кіріңіз.", err_nouser:"Бұл құрылғыда осы email-мен аккаунт жоқ. Email-ді тексеріңіз немесе тіркеліңіз.", err_wrong:"Құпиясөз қате. Қайта көріңіз.",
+  guest:"Қонақ", logout:"Шығу",
+  h_eyebrow:"Жеке кабинет", h_title:(n)=>`Қайта оралуыңызбен, ${n}`, h_title_guest:"Жеке кабинет",
+  h_guest_note:"Сіз StudyMate-ті қонақ ретінде қолданып жатырсыз. Прогресіңіз email-іңізге сақталуы үшін аккаунт ашыңыз.", h_make_acct:"Аккаунт ашу",
+  h_ready:"қазіргі дайындық", h_goal:"мақсатқа қажет", h_days:"емтиханға дейін күн", h_nodate:"емтихан күнін көрсетіңіз",
+  h_tasks:(d,t)=>`Жоспардың ${t} тапсырмасының ${d}-і орындалды`, h_continue:"Жоспарды жалғастыру", h_check:"Прогресті тексеру",
+  h_check_due:"Прогресті тексеру уақыты келді: қаншалықты өскеніңізді көріңіз.", h_check_in:(d)=>`Келесі прогресс тексеруі ${d} күннен кейін ұсынылады.`,
+  h_history:"Сіздің прогресіңіз", h_check_lbl:(i,d)=>`${i}-тексеру · ${d}`,
+  h_xp:"ұпай", h_streak:"күн қатарынан", h_league:"лига", leagues:["Қола","Күміс","Алтын"],
+  h_tiers:"Тарифтер мен бағалар", h_mentor:"Mentor Hour және есептер", h_newgoal:"Мақсатты өзгерту", h_tier_now:(n)=>`Менің тарифім: ${n}`,
+  sq_title:"Study Squad", sq_text:"Достармен оқығанда мотивация ұзақ сақталады. Сыныптасыңызды тегін Goal Check-ке шақырып, бір тақырыптарды бірге оқыңыз. Командалар рейтингі кейін қосылады.",
+  sq_btn:"Досты шақыру", sq_shared:"Шақыру жіберілді. +10 ұпай.", sq_copied:"Шақыру көшірілді. Оны Telegram немесе WhatsApp-қа қойыңыз. +10 ұпай.",
+  invite:(n)=>`${n} сізді StudyMate AI-ға шақырады: ҰБТ математикасы немесе матанализ бойынша 10 минуттық тегін Goal Check, апталық жоспар және жауап емес, кеңес беретін репетитор.`,
+  g_date:"Емтихан күні", g_weeks_out:(w)=>`Емтиханға дейін ${w} апта`, err_target:"Мақсатты балды 50-ден 140-қа дейін енгізіңіз.", err_date:"Емтихан күнін болашақтан, бір жылдан кешіктірмей таңдаңыз.",
+  c_eyebrow_b:"Прогресті тексеру · жаңа сұрақтар", r_eyebrow:"3-қадам · Сіздің нәтижеңіз", r_eyebrow_b:"Прогресті тексеру · Сіздің нәтижеңіз",
+  r_cmp:"Бұрын және кейін", r_cmp_delta:(d)=> d>0 ? `Дайындық +${d} пунктке өсті` : d<0 ? `Дайындық ${d} пунктке өзгерді` : "Әзірге өзгеріс жоқ",
+  r_cmp_note:"Прогресті тексеруде сол тақырыптар бойынша жаңа сұрақтар бар, сондықтан өсім жауаптарды есте сақтаудан емес.",
+  grant_title:"Грантқа түсу мүмкіндігі (шамамен)", grant_text:"Мамандығыңыз бойынша өткен жылғы гранттың ең төменгі балын енгізіңіз. Оны Ұлттық тестілеу орталығы жариялайды:",
+  grant_in:"Өткен жылғы грант балы (140-тан)", grant_btn:"Бағалау", err_grant:"Балды 50-ден 140-қа дейін енгізіңіз.",
+  grant_est:(s)=>`ҰБТ-ның басқа пәндері де осы деңгейде болса, балыңыз 140-тан шамамен ${s} болады.`,
+  grant_hi:"Мүмкіндік жақсы: сіз өткен жылғы грант балынан жоғарысыз.", grant_mid:"Шекарада: өткен жылғы грант балынан 10 балл шегіндесіз.", grant_lo:"Әзірге мүмкіндік төмен: алдымен әлсіз тақырыптарды жабыңыз.",
+  grant_note:"Бұл ресми болжам емес. Грант балдары жыл сайын өзгереді, ал тексеру тек бейіндік математиканы қамтиды.",
+  p_horizon:(w,h)=>`Емтиханға дейін ${w} апта. Жоспар алдағы ${h} аптаны қамтиды; оны жаңарту үшін прогресті тексеріңіз.`,
+  p_study:"Оқу", p_mastered:"Меңгерілді", p_progress:"Прогресті тексеру: тақырыптарыңыз бойынша жаңа сұрақтар", p_done:(d,t)=>`${t} тапсырманың ${d}-і орындалды`,
+  go_tutor:"Бірінші тақырыптан бастау", p_home:"Жеке кабинет", t_back:"Жоспарға оралу", b_plan:"Жоспарға оралу", d_home:"Жеке кабинетке өту",
+  ti_eyebrow:"Тарифтер", ti_title:"Өзіңізге лайық тарифті таңдаңыз", ti_note:"Пилот: онлайн төлем әзірге қосылмаған, тестілеу кезінде барлық тариф тегін. Сұранысты тексеру үшін таңдаған тарифіңізді жазып аламыз.",
+  ti_names:["Free","Standard","Premium + Mentor"], ti_month:"₸ / ай", ti_choose:"Таңдау", ti_chosen:"Сіздің тарифіңіз", ti_back:"Кабинетке оралу",
+  ti_feats:[["Goal Check және апталық жоспар","Кеңес беретін репетитор және терминдер көпірі","Teach-back","ЖИ-көмекші: күніне 5 сұрақ"],
+            ["Free-дегінің бәрі","Күндік шектеусіз ЖИ-көмекші","«Қай жерде қателестім?» фото-тексеруі","Прогресті тексеру және ата-анаға апталық есеп"],
+            ["Standard-тағының бәрі","Mentor Hour: сол емтиханды тапсырған студент-ментормен Google Meet-те аптасына 20 минут","Апталық есебіңіз қоңырауға дейін менторға барады","Онлайн репетитор кезексіз"]],
+  ti_saved:(n)=>`Сақталды: ${n}. Рақмет, бұл бағаларды тексеруге көмектеседі.`,
+  m_eyebrow:"Mentor Hour және есептер", m_title:"Апталық Mentor Hour",
+  m_text:"Сол емтиханды тапсырған студент-ментор сізбен Google Meet-те аптасына 20 минут жұмыс істейді. Қоңырауға дейін ментор апталық есебіңізді алады, сондықтан уақыт қазір қай жерде екеніңізді түсіндіруге кетпейді.",
+  m_day:"Күн", m_time:"Уақыт", days:["Дүйсенбі","Сейсенбі","Сәрсенбі","Бейсенбі","Жұма","Сенбі","Жексенбі"],
+  m_cal:"Google Күнтізбеге қосу (әр апта)", m_join:"Mentor Hour-ға қосылу", cal_title:"StudyMate Mentor Hour",
+  m_concierge:"Пилот: есепті жібергеннен кейін команда менторды қолмен таңдап, уақытты Telegram-да растайды.",
+  m_sum_title:"Менторға апталық есеп", m_sum_note:"Тексерулеріңіз, жоспарыңыз және Teach-back бойынша жасалды. Оқып, сұрақ қосып, жіберіңіз.", m_q:"Менторға сұрақ (міндетті емес)",
+  m_tg:"Telegram-да жіберу", m_mail:"Email арқылы жіберу", m_copy:"Көшіру", m_copied:"Көшірілді.",
+  par_title:"Ата-анаға арналған есеп", par_text:"Ата-аналар бір минутта оқитын қысқа есеп: прогресс, еңбек және келесі қадам.", par_wa:"WhatsApp-та жіберу", par_tg:"Telegram", par_mail:"Email",
+  m_back:"Кабинетке оралу",
+  s_head:(n)=>`StudyMate AI · апталық есеп · ${n}`, s_par_head:(n)=>`StudyMate AI · ${n}: аптадағы прогресс`,
+  s_goal:"Мақсат", s_exam:"Емтихан", s_ready:"Дайындық", s_mastered:"Меңгерілді (Teach-back 70%+)", s_weak:"Жұмыс істеу керек", s_tasks:"Жоспар тапсырмалары орындалды", s_err:"Ұпай жоғалтудың басты себебі",
+  s_q:"Сұрақ", s_none:"әзірге жоқ", s_next:"Келесі қадам", s_unt:(t)=>`ҰБТ, 140-тан ${t}`, s_uni:(t)=>`матанализ емтиханы, ${t}%+`, s_streak:(d)=>`${d} күн қатарынан оқиды`,
+  ai_sub_by:(x)=>`${x} негізінде`, ai_off:"ЖИ-көмекші прототиптің осы көшірмесінде қосылмаған. Қазір кеңестерді пайдалануға болады немесе",
+  ph_noai:"Бұл тексеруге ЖИ-көмекші керек, ал ол прототиптің осы көшірмесінде қосылмаған. Әзірге онлайн репетиторды шақыруға болады.", ai_limit:"ЖИ-көмекші бос емес. Бір минут күтіп, қайта көріңіз."}
+};
+["en","ru","kk"].forEach(c=> Object.assign(T[c], T2[c]));
+const KEY_NAMES = { en:["the main rule","the method","the next step","checking the answer"], ru:["главное правило","способ","следующий шаг","проверку ответа"], kk:["негізгі ереже","тәсіл","келесі қадам","жауапты тексеру"] };
+const LANG_NAME = {en:"English", ru:"Russian", kk:"Kazakh"};
+
+/* ---------- state ---------- */
+const S = { lang:"en", role:null, seg:null, target:null, weeks:8, answers:[], qi:0, startedAt:Date.now(), checkStart:null, checkSecs:null,
+  weak:[], strong:[], readiness:0, goal:0, topicIdx:0, hints:0, tutorPick:null, solved:false, attempts:0, tbScore:null, tbTries:0, tbMode:"rules", aiQuestions:0, liveClicks:0,
+  qSecs:[], qShownAt:0, etypes:[], aiBlocked:false, aiBusy:false, imgOK:false, photoChecks:0, photoResult:null, tutorChosen:null,
+  fb:{ease:null, useful:null, again:null, pay:null}, sample:null, steps:[], bankMode:"A", aiVia:null, aiLabel:null, authErrors:0, inputErrors:0, grant:null };
+const $ = (id)=>document.getElementById(id);
+const L = ()=>T[S.lang];
+const tx = (o)=> (o && typeof o === "object") ? (o[S.lang] || o.en) : o;
+const en = (o)=> (o && typeof o === "object") ? o.en : o;
+function store(k,v){ try{ localStorage.setItem("sm_"+k, JSON.stringify(v)); }catch(e){} }
+function load(k){ try{ const v = localStorage.getItem("sm_"+k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
+function mark(step){ if(!S.steps.includes(step)) S.steps.push(step); }
+const APP_URL = (/^https?:$/.test(location.protocol) && !/claude/i.test(location.hostname)) ? location.origin + location.pathname : "https://claude.ai/artifact/PUXDRFtwvf6wo34ievp5yd";
+
+/* ---------- SHA-256 (password hashes; pure JS, so it also works from a file or without HTTPS) ---------- */
+function sha256(input){
+  const str = unescape(encodeURIComponent(input));
+  const rr = (v,a)=> (v>>>a) | (v<<(32-a)); const maxWord = Math.pow(2,32);
+  const words = []; const bitLen = str.length*8; let hash = [], k = [], pc = 0; const comp = {};
+  for(let c=2; pc<64; c++){ if(!comp[c]){ for(let i=0;i<313;i+=c) comp[i]=c; hash[pc] = (Math.pow(c,.5)*maxWord)|0; k[pc++] = (Math.pow(c,1/3)*maxWord)|0; } }
+  let m = str + "\x80"; while(m.length%64 - 56) m += "\x00";
+  for(let i=0;i<m.length;i++){ words[i>>2] |= m.charCodeAt(i) << ((3-i)%4)*8; }
+  words[words.length] = ((bitLen/maxWord)|0); words[words.length] = bitLen;
+  for(let j=0; j<words.length;){
+    const w = words.slice(j, j+=16), old = hash; hash = hash.slice(0,8);
+    for(let i=0;i<64;i++){
+      const w15 = w[i-15], w2 = w[i-2], a = hash[0], e = hash[4];
+      const t1 = hash[7] + (rr(e,6)^rr(e,11)^rr(e,25)) + ((e&hash[5])^((~e)&hash[6])) + k[i] +
+        (w[i] = (i<16) ? w[i] : (w[i-16] + (rr(w15,7)^rr(w15,18)^(w15>>>3)) + w[i-7] + (rr(w2,17)^rr(w2,19)^(w2>>>10)))|0);
+      const t2 = (rr(a,2)^rr(a,13)^rr(a,22)) + ((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash = [(t1+t2)|0].concat(hash); hash[4] = (hash[4]+t1)|0;
+    }
+    for(let i=0;i<8;i++) hash[i] = (hash[i]+old[i])|0;
+  }
+  let out = ""; for(let i=0;i<8;i++) for(let j=3;j+1;j--){ const b = (hash[i]>>(j*8))&255; out += (b<16 ? "0" : "") + b.toString(16); }
+  return out;
+}
+function hashPass(pass, salt){ let h = sha256(salt+":"+pass); for(let i=0;i<300;i++) h = sha256(h+salt); return h; }
+function rid(){ try{ const a = new Uint8Array(12); crypto.getRandomValues(a); return Array.from(a, b=> b.toString(16).padStart(2,"0")).join(""); }catch(e){ return (Math.random().toString(16).slice(2)+Date.now().toString(16)).slice(0,24); } }
+
+/* ---------- accounts and saved progress (this browser only, no server) ---------- */
+let USER = null, D = null;
+function users(){ return load("users") || {}; }
+function seedDemo(){ const u = users(); if(!u["demo@studymate.kz"]){ const salt = "sm-demo-2026"; u["demo@studymate.kz"] = {id:"demo", name:"Demo", salt, hash:hashPass("demo1234", salt), created:Date.now()}; store("users", u); } }
+function blankData(){ return {v:4, role:null, seg:null, target:null, goal:0, examDate:null, weeks:8, checks:[], weak:[], strong:[], etypes:[], readiness:0, correct:null, checkSecs:null,
+  tasks:{}, mastered:{}, events:{}, tier:null, xp:0, streak:{last:null, days:0}, slot:{day:2, time:"19:00"}, invites:0, sent:{mentor:0, parent:0}, lastResult:null}; }
+function loadData(id){ const d = Object.assign(blankData(), load("data_"+id) || {}); d.streak = Object.assign({last:null, days:0}, d.streak); d.sent = Object.assign({mentor:0, parent:0}, d.sent); return d; }
+function saveData(){ if(USER && D) store("data_"+USER.id, D); }
+const SYNC = ["role","seg","target","goal","weeks","weak","strong","etypes","readiness","correct","checkSecs"];
+function toD(){ if(!D) return; SYNC.forEach(k=> D[k] = S[k]); saveData(); }
+function fromD(){ SYNC.forEach(k=> S[k] = Array.isArray(D[k]) ? D[k].slice() : D[k]); }
+function dispName(){ return !USER ? "" : USER.guest ? L().guest : USER.name; }
+function segChecks(){ return D ? D.checks.filter(c=> c.seg===S.seg) : []; }
+function dayStr(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function addXP(n){
+  if(!D) return; D.xp = Math.max(0, (D.xp||0) + n);
+  if(n>0){ const t = dayStr(new Date()); if(D.streak.last !== t){ const y = new Date(); y.setDate(y.getDate()-1); D.streak.days = D.streak.last===dayStr(y) ? D.streak.days+1 : 1; D.streak.last = t; } }
+  saveData();
+}
+function once(key, n){ if(!D || D.events[key]) return; D.events[key] = Date.now(); addXP(n); }
+function streakNow(){ if(!D || !D.streak.last) return 0; const t = new Date(), y = new Date(); y.setDate(y.getDate()-1); return (D.streak.last===dayStr(t) || D.streak.last===dayStr(y)) ? D.streak.days : 0; }
+function leagueIdx(xp){ return xp>=300 ? 2 : xp>=100 ? 1 : 0; }
+function resetRun(){ Object.assign(S, {role:null, seg:null, target:null, weeks:8, answers:[], qi:0, weak:[], strong:[], readiness:0, goal:0, topicIdx:0, hints:0, tutorPick:null, solved:false, attempts:0,
+  tbScore:null, tbTries:0, etypes:[], correct:null, checkSecs:null, bankMode:"A", grant:null, fb:{ease:null, useful:null, again:null, pay:null}}); }
+function startSession(user){
+  USER = user; D = loadData(user.id); resetRun(); fromD();
+  store("session", user.guest ? "guest" : user.email); renderAcct(); mark("signed_in");
+  if(D.checks.length && S.seg){ show("s-home"); renderHome(); } else { show("s-welcome"); }
+}
+function renderAcct(){ $("acct").hidden = !USER || current==="s-auth"; if(USER) $("acct-name").textContent = dispName(); }
+
+
+/* ---------- theme ---------- */
+function systemDark(){ try{ return window.matchMedia("(prefers-color-scheme: dark)").matches; }catch(e){ return false; } }
+function currentTheme(){ const t = document.documentElement.getAttribute("data-theme"); return t ? t : (systemDark() ? "dark" : "light"); }
+function setTheme(t){ document.documentElement.setAttribute("data-theme", t); store("theme", t); updateThemeBtn(); }
+function updateThemeBtn(){ $("theme-btn").textContent = currentTheme()==="dark" ? L().light : L().dark; }
+$("theme-btn").onclick = ()=> setTheme(currentTheme()==="dark" ? "light" : "dark");
+try{ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateThemeBtn); }catch(e){}
+
+/* ---------- live tutor (Google Meet) ---------- */
+document.addEventListener("click", e=>{ const a = e.target.closest && e.target.closest('a[href="'+MEET+'"]'); if(!a) return;
+  S.liveClicks++; mark("live_tutor"); if(a.dataset.tutor) S.tutorChosen = a.dataset.tutor; });
+
+/* ---------- screens ---------- */
+const SCREENS = ["s-auth","s-home","s-tiers","s-mentor","s-welcome","s-goal","s-check","s-result","s-plan","s-tutor","s-teach","s-feedback","s-done"];
+const RAIL_OF = {"s-welcome":-1,"s-goal":0,"s-check":1,"s-result":1,"s-plan":2,"s-tutor":3,"s-teach":4,"s-feedback":5,"s-done":5};
+let current = "s-welcome";
+function show(id){ current = id; SCREENS.forEach(s=>{ $(s).hidden = (s !== id); }); renderRail(); renderAcct(); window.scrollTo({top:0, behavior:"auto"}); }
+function renderRail(){ const r = $("rail"); r.innerHTML = ""; const now = (current in RAIL_OF) ? RAIL_OF[current] : -1; r.hidden = now < 0;
+  L().rail.forEach((name,i)=>{ const li = document.createElement("li"); li.textContent = (i+1)+". "+name; if(i<now) li.className="done"; else if(i===now) li.className="now"; r.appendChild(li); }); }
+
+/* ---------- i18n ---------- */
+function applyLang(){
+  const l = L(); document.documentElement.lang = S.lang;
+  const set = (id, v)=>{ const el = $(id); if(el) el.textContent = v; };
+  set("t-proto", l.proto); set("live-top-text", l.live); $("live-top").title = l.live_title; $("live-top").setAttribute("aria-label", l.live_title);
+  ["w_eyebrow","w_title","w_text","w_who","w_beta","w_beta2","w_alpha","w_alpha2","g_eyebrow","g_title","g_unt","g_unt2","g_uni","g_uni2","g_target","g_grade","g_weeks","c_eyebrow","r_eyebrow","r_now","r_target","r_s1","r_s2","r_s3","r_weak","r_strong","r_note","p_eyebrow","t_eyebrow","b_eyebrow","b_text","b_label","f_eyebrow","f_title","f_q1","f_q2","f_q3","f_q4","f_q5","d_eyebrow","d_title","d_text","foot"]
+    .forEach(k=> set("t-"+k.replace("_","-"), l[k]));
+  set("go-goal", l.start); set("go-check", l.go_check); set("go-plan", l.go_plan); set("go-tutor", l.go_tutor); set("go-finish-early", l.skip);
+  set("t-hint", l.hint); set("t-check", l.check); set("t-stuck", l.stuck); set("live-tutor", l.stuck_btn);
+  set("chat-send", l.ask); $("chat-in").placeholder = l.ai_ph; set("go-teach", l.go_teach);
+  set("b-check", l.b_check); set("b-retry", l.retry); set("go-feedback", l.go_fb); $("b-text").placeholder = l.b_ph;
+  set("f-send", l.f_send); set("d-copy", l.copy); set("d-restart", l.restart); set("d-copied", l.copied);
+  set("t-r-emap", l.r_emap); set("t-r-emap-note", l.r_emap_note); set("go-ai-result", l.ai_result);
+  set("t-terms-title", l.terms_title); set("t-terms-note", l.terms_note);
+  set("t-ph-title", l.ph_title); set("t-ph-text", l.ph_text); set("t-ph-file", l.ph_file); $("ph-typed").placeholder = l.ph_typed; set("ph-check", l.ph_check);
+  set("t-tutors-title", l.tutors_title); set("t-tutors-demo", l.tutors_demo); set("t-ask-ai", l.ask_task);
+  set("ai-fab-text", l.ai_name); set("t-ai-title", l.ai_name); $("ai-close").setAttribute("aria-label", l.close);
+  set("t-ai-off", l.ai_off); set("ai-off-link", l.stuck_btn.toLowerCase());
+  const pu = PATH_UI[S.lang]; set("open-map", pu.btn); set("t-map-title", pu.title); set("t-map-sub", pu.sub); $("map-close").setAttribute("aria-label", l.close);
+  if(!$("map-modal").hidden) renderMap();
+  ["auth_eyebrow","auth_title","auth_text","a_name","a_email","a_demo","a_note","g_date","r_cmp","r_cmp_note","grant_title","grant_text","grant_in","h_eyebrow","h_ready","h_goal","h_history","h_xp","h_streak","h_league","h_guest_note",
+   "sq_title","sq_text","ti_eyebrow","ti_title","ti_note","m_eyebrow","m_title","m_text","m_day","m_time","m_concierge","m_sum_title","m_sum_note","m_q","par_title","par_text"]
+    .forEach(k=> set("t-"+k.replace(/_/g,"-"), l[k]));
+  set("tab-signup", l.tab_signup); set("tab-login", l.tab_login); set("a-guest", l.a_guest); set("a-demo-fill", l.a_demo_fill); renderAuth();
+  set("h-continue", l.h_continue); set("h-check", l.h_check); set("h-make-acct", l.h_make_acct); set("sq-invite", l.sq_btn);
+  set("h-tiers", l.h_tiers); set("h-mentor", l.h_mentor); set("h-newgoal", l.h_newgoal); set("h-logout", l.logout);
+  set("grant-btn", l.grant_btn); set("p-home", l.p_home); set("t-back", l.t_back); set("b-plan", l.b_plan); set("d-home", l.d_home); set("ti-back", l.ti_back);
+  set("m-cal", l.m_cal); set("m-join", l.m_join); set("m-tg", l.m_tg); set("m-mail", l.m_mail); set("m-copy", l.m_copy); set("par-wa", l.par_wa); set("par-tg", l.par_tg); set("par-mail", l.par_mail); set("m-back", l.m_back);
+  set("t-ai-sub", l.ai_sub_by(S.aiLabel || "Claude"));
+  renderAcct(); updateWeeksOut();
+  if(current==="s-home") renderHome(); if(current==="s-tiers") renderTiers(); if(current==="s-mentor") renderMentor();
+  renderChips();
+  ["en","ru","kk"].forEach(c=> $("lang-"+c).setAttribute("aria-pressed", S.lang===c));
+  updateThemeBtn(); renderFeedbackControls(); renderRail();
+  if(current==="s-check") renderQuestion(); if(current==="s-result") renderResult(); if(current==="s-plan") renderPlan();
+  if(current==="s-tutor") renderTutor(true); if(current==="s-teach") $("b-title").textContent = l.b_title(tx(topicNow().topic));
+}
+["en","ru","kk"].forEach(c=> $("lang-"+c).onclick = ()=>{ S.lang=c; store("lang",c); applyLang(); });
+
+/* ---------- auth: sign up / log in / guest ---------- */
+let authMode = "signup", migrateGuest = false;
+function renderAuth(){
+  const l = L(), up = authMode==="signup";
+  $("tab-signup").setAttribute("aria-selected", up); $("tab-login").setAttribute("aria-selected", !up);
+  $("a-name-wrap").hidden = !up; $("t-a-pass").textContent = up ? l.a_pass : l.a_pass_login;
+  $("a-pass").setAttribute("autocomplete", up ? "new-password" : "current-password");
+  $("a-submit").textContent = up ? l.a_signup : l.a_login; $("a-guest").hidden = migrateGuest;
+  if($("a-err").dataset.k) $("a-err").textContent = l[$("a-err").dataset.k];
+}
+function authErr(k){ const e = $("a-err"); e.dataset.k = k || ""; e.hidden = !k; e.textContent = k ? L()[k] : ""; if(k) S.authErrors++; }
+function setAuthMode(m){ authMode = m; authErr(null); renderAuth(); }
+$("tab-signup").onclick = ()=> setAuthMode("signup"); $("tab-login").onclick = ()=> setAuthMode("login");
+$("a-demo-fill").onclick = ()=>{ setAuthMode("login"); $("a-email").value = "demo@studymate.kz"; $("a-pass").value = "demo1234"; $("a-submit").focus(); };
+$("auth-form").addEventListener("submit", e=>{
+  e.preventDefault();
+  const name = $("a-name").value.trim().replace(/\s+/g," "), email = $("a-email").value.trim().toLowerCase(), pass = $("a-pass").value;
+  if(authMode==="signup" && (name.length<2 || name.length>40)) return authErr("err_name");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return authErr("err_email");
+  if(pass.length < 6) return authErr("err_pass");
+  const u = users();
+  if(authMode==="signup"){
+    if(u[email]) return authErr("err_exists");
+    const salt = rid(), id = rid(); u[email] = {id, name, salt, hash:hashPass(pass, salt), created:Date.now()}; store("users", u);
+    if(migrateGuest){ const g = load("data_guest"); if(g){ store("data_"+id, g); try{ localStorage.removeItem("sm_data_guest"); }catch(err){} } }
+    migrateGuest = false; authErr(null); $("a-pass").value = ""; mark("signup");
+    startSession({id, name, email, guest:false});
+  } else {
+    const rec = u[email]; if(!rec) return authErr("err_nouser");
+    if(hashPass(pass, rec.salt) !== rec.hash) return authErr("err_wrong");
+    authErr(null); $("a-pass").value = ""; mark("login");
+    startSession({id:rec.id, name:rec.name, email, guest:false});
+  }
+});
+$("a-guest").onclick = ()=>{ authErr(null); mark("guest"); startSession({id:"guest", name:null, email:null, guest:true}); };
+function logout(){ USER = null; D = null; migrateGuest = false; resetRun(); store("session", null); setAuthMode("login"); show("s-auth"); }
+$("h-logout").onclick = logout;
+$("h-make-acct").onclick = ()=>{ migrateGuest = true; setAuthMode("signup"); show("s-auth"); };
+$("acct-home").onclick = ()=>{ if(D && D.checks.length && S.seg){ show("s-home"); renderHome(); } else show("s-welcome"); };
+
+/* ---------- home: dashboard with saved progress ---------- */
+function renderHome(){
+  if(!D) return; const l = L(), checks = segChecks(), last = checks[checks.length-1];
+  $("h-title").textContent = USER.guest ? l.h_title_guest : l.h_title(USER.name); $("h-guest").hidden = !USER.guest;
+  $("h-ready").textContent = (last ? last.readiness : S.readiness)+"%"; $("h-goal").textContent = S.goal+"%";
+  const days = D.examDate ? Math.ceil((new Date(D.examDate+"T00:00:00") - new Date(dayStr(new Date())+"T00:00:00"))/86400000) : null;
+  $("h-days").textContent = (days!==null && days>=0) ? days : "–"; $("h-days-lbl").textContent = (days!==null && days>=0) ? l.h_days : l.h_nodate;
+  const pm = planModel(), done = pm.ids.filter(id=> D.tasks[id]).length;
+  $("h-tasks").textContent = l.h_tasks(done, pm.ids.length); $("h-tasks-bar").style.width = (pm.ids.length ? done/pm.ids.length*100 : 0)+"%";
+  const since = last ? Math.floor((Date.now()-last.at)/86400000) : 0;
+  $("h-check-note").textContent = since >= 14 ? l.h_check_due : l.h_check_in(14 - since);
+  renderCmp($("h-history"), checks.slice(-5));
+  $("h-xp").textContent = D.xp||0; $("h-streak").textContent = streakNow(); $("h-league").textContent = l.leagues[leagueIdx(D.xp||0)];
+  $("h-tier-now").textContent = D.tier!==null && D.tier!==undefined ? l.h_tier_now(l.ti_names[D.tier]) : "";
+  $("sq-msg").hidden = true;
+}
+function shortDate(ts){ try{ return new Date(ts).toLocaleDateString({en:"en-GB", ru:"ru-RU", kk:"kk-KZ"}[S.lang], {day:"numeric", month:"short"}); }catch(e){ return dayStr(new Date(ts)); } }
+function renderCmp(box, checks){
+  const l = L(); box.innerHTML = "";
+  checks.forEach((c, i)=>{
+    const ln = document.createElement("div"); ln.className = "ln" + (i===checks.length-1 ? " last" : "");
+    const nm = document.createElement("span"); nm.textContent = l.h_check_lbl(segChecks().indexOf(c)+1, shortDate(c.at));
+    const bar = document.createElement("div"); bar.className = "bar"; const fill = document.createElement("i"); fill.style.width = c.readiness+"%"; bar.appendChild(fill);
+    const v = document.createElement("b"); v.textContent = c.readiness+"%";
+    ln.append(nm, bar, v); box.appendChild(ln); });
+  if(!checks.length){ const p = document.createElement("p"); p.className = "muted"; p.textContent = l.r_none; box.appendChild(p); }
+}
+$("h-continue").onclick = ()=>{ show("s-plan"); renderPlan(); };
+$("h-check").onclick = ()=>{ mark("progress_check"); startCheck("B"); };
+$("h-newgoal").onclick = ()=>{ prefillGoal(); show("s-goal"); };
+$("h-tiers").onclick = ()=>{ $("ti-msg").hidden = true; show("s-tiers"); renderTiers(); };
+$("h-mentor").onclick = ()=>{ $("m-msg").hidden = true; show("s-mentor"); renderMentor(); };
+$("sq-invite").onclick = ()=>{
+  const l = L(), text = l.invite(USER && !USER.guest ? USER.name : "StudyMate"), done = (k)=>{ D.invites = (D.invites||0)+1; if(D.invites<=5) addXP(10); else saveData(); mark("invite"); $("sq-msg").textContent = l[k]; $("sq-msg").hidden = false; $("h-xp").textContent = D.xp; };
+  const copy = ()=>{ try{ navigator.clipboard.writeText(text+" "+APP_URL).then(()=> done("sq_copied"), ()=> window.open("https://t.me/share/url?url="+encodeURIComponent(APP_URL)+"&text="+encodeURIComponent(text), "_blank", "noopener")); }
+    catch(e){ window.open("https://t.me/share/url?url="+encodeURIComponent(APP_URL)+"&text="+encodeURIComponent(text), "_blank", "noopener"); } };
+  if(navigator.share){ navigator.share({title:"StudyMate AI", text, url:APP_URL}).then(()=> done("sq_shared"), err=>{ if(!(err && err.name==="AbortError")) copy(); }); } else copy();
+};
+
+/* ---------- plans (tiers): choice is recorded, payment is not connected ---------- */
+const PRICES = [0, 4000, 10000];
+function renderTiers(){
+  const l = L(), box = $("tier-list"); box.innerHTML = "";
+  l.ti_names.forEach((nm, i)=>{
+    const c = document.createElement("div"); c.className = "tier" + (D && D.tier===i ? " on" : "");
+    const h = document.createElement("h3"); h.textContent = nm;
+    const pr = document.createElement("div"); pr.className = "price"; pr.textContent = PRICES[i].toLocaleString("ru-RU").replace(/ /g," ")+" "; const sm = document.createElement("small"); sm.textContent = l.ti_month; pr.appendChild(sm);
+    const ul = document.createElement("ul"); l.ti_feats[i].forEach(f=>{ const li = document.createElement("li"); li.textContent = f; ul.appendChild(li); });
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn" + (D && D.tier===i ? " sel" : " ghost"); b.textContent = D && D.tier===i ? l.ti_chosen : l.ti_choose;
+    b.onclick = ()=>{ D.tier = i; saveData(); mark("tier"); renderTiers(); $("ti-msg").textContent = l.ti_saved(nm); $("ti-msg").hidden = false; };
+    c.append(h, pr, ul, b); box.appendChild(c); });
+}
+$("ti-back").onclick = ()=>{ show("s-home"); renderHome(); };
+
+/* ---------- Mentor Hour (concierge) and weekly summaries for the mentor and parents ---------- */
+const TIMES = ["16:00","17:00","18:00","19:00","20:00","21:00"];
+function nextSlot(){
+  const jsDay = (D.slot.day+1)%7, [hh, mm] = D.slot.time.split(":").map(Number), d = new Date(); d.setHours(hh, mm, 0, 0);
+  let add = (jsDay - d.getDay() + 7) % 7; if(add===0 && d <= new Date()) add = 7; d.setDate(d.getDate()+add); return d;
+}
+function calStamp(d){ return dayStr(d).replace(/-/g,"")+"T"+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")+"00"; }
+function topicNames(ids){ const b = QB[S.seg] || []; return ids.map(id=>{ const q = b.find(x=> x.id===id); return q ? tx(q.topic) : id; }); }
+function summaryParts(){
+  const l = L(), checks = segChecks(), first = checks[0], last = checks[checks.length-1];
+  const mastered = Object.keys(D.mastered).filter(id=> D.mastered[id]>=70 && (QB[S.seg]||[]).some(q=> q.id===id));
+  const weak = S.weak.map(i=> QB[S.seg][i].id).filter(id=> !mastered.includes(id));
+  const pm = planModel(), done = pm.ids.filter(id=> D.tasks[id]).length;
+  const c = etCounts(), top = Object.keys(c).filter(k=> c[k]).sort((a,b)=> c[b]-c[a])[0];
+  return {l, first, last, mastered, weak, done, total:pm.ids.length, top, c};
+}
+function mentorText(){
+  const P = summaryParts(), l = P.l, lines = [l.s_head(dispName())];
+  lines.push(l.s_goal+": "+(S.seg==="unt" ? l.s_unt(S.target) : l.s_uni(S.target)) + (D.examDate ? " · "+l.s_exam+": "+D.examDate : ""));
+  if(P.last) lines.push(l.s_ready+": "+(P.first && P.first!==P.last ? P.first.readiness+"% → " : "")+P.last.readiness+"% ("+l.r_target.toLowerCase()+" "+S.goal+"%)");
+  lines.push(l.s_mastered+": "+(topicNames(P.mastered).join(", ") || l.s_none));
+  lines.push(l.s_weak+": "+(topicNames(P.weak).join(", ") || l.s_none));
+  lines.push(l.s_tasks+": "+P.done+" / "+P.total);
+  if(P.top) lines.push(l.s_err+": "+l.et[P.top]+" ("+P.c[P.top]+")");
+  if(streakNow()) lines.push(l.s_streak(streakNow()));
+  const q = $("m-q").value.trim(); if(q) lines.push(l.s_q+": "+q);
+  return lines.join("\n");
+}
+function parentText(){
+  const P = summaryParts(), l = P.l, lines = [l.s_par_head(dispName())];
+  if(P.last) lines.push(l.s_ready+": "+(P.first && P.first!==P.last ? P.first.readiness+"% → " : "")+P.last.readiness+"% ("+l.r_target.toLowerCase()+" "+S.goal+"%)");
+  lines.push(l.s_tasks+": "+P.done+" / "+P.total);
+  lines.push(l.s_mastered+": "+(topicNames(P.mastered).join(", ") || l.s_none));
+  if(streakNow()) lines.push(l.s_streak(streakNow()));
+  if(P.weak.length) lines.push(l.s_next+": "+l.p_learn(topicNames([P.weak[0]])[0]));
+  return lines.join("\n");
+}
+function renderMentor(){
+  const l = L(), dSel = $("m-day"), tSel = $("m-time");
+  dSel.innerHTML = ""; l.days.forEach((d,i)=>{ const o = document.createElement("option"); o.value = i; o.textContent = d; dSel.appendChild(o); }); dSel.value = D.slot.day;
+  tSel.innerHTML = ""; TIMES.forEach(t=>{ const o = document.createElement("option"); o.value = t; o.textContent = t; tSel.appendChild(o); }); tSel.value = D.slot.time;
+  updateMentorLinks();
+}
+function updateMentorLinks(){
+  const l = L(), st = nextSlot(), en2 = new Date(st.getTime()+20*60000);
+  $("m-cal").href = "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(l.cal_title)+"&dates="+calStamp(st)+"/"+calStamp(en2)+
+    "&details="+encodeURIComponent(MEET)+"&location="+encodeURIComponent(MEET)+"&recur="+encodeURIComponent("RRULE:FREQ=WEEKLY");
+  const mt = mentorText(), pt = parentText(); $("m-sum").textContent = mt; $("par-sum").textContent = pt;
+  $("m-tg").href = "https://t.me/share/url?url="+encodeURIComponent(APP_URL)+"&text="+encodeURIComponent(mt);
+  $("m-mail").href = "mailto:?subject="+encodeURIComponent(l.cal_title)+"&body="+encodeURIComponent(mt);
+  $("par-wa").href = "https://wa.me/?text="+encodeURIComponent(pt);
+  $("par-tg").href = "https://t.me/share/url?url="+encodeURIComponent(APP_URL)+"&text="+encodeURIComponent(pt);
+  $("par-mail").href = "mailto:?subject="+encodeURIComponent("StudyMate AI")+"&body="+encodeURIComponent(pt);
+}
+$("m-day").onchange = ()=>{ D.slot.day = parseInt($("m-day").value,10)||0; saveData(); updateMentorLinks(); };
+$("m-time").onchange = ()=>{ D.slot.time = $("m-time").value; saveData(); updateMentorLinks(); };
+$("m-q").addEventListener("input", updateMentorLinks);
+["m-tg","m-mail"].forEach(id=> $(id).addEventListener("click", ()=>{ D.sent.mentor++; saveData(); mark("mentor_summary"); }));
+["par-wa","par-tg","par-mail"].forEach(id=> $(id).addEventListener("click", ()=>{ D.sent.parent++; saveData(); mark("parent_report"); }));
+$("m-cal").addEventListener("click", ()=>{ mark("mentor_hour"); }); $("m-join").addEventListener("click", ()=>{ mark("mentor_join"); });
+$("m-copy").onclick = ()=>{ const ok = ()=>{ $("m-msg").textContent = L().m_copied; $("m-msg").hidden = false; D.sent.mentor++; saveData(); mark("mentor_summary"); };
+  try{ navigator.clipboard.writeText($("m-sum").textContent).then(ok, ()=>{ const r = document.createRange(); r.selectNodeContents($("m-sum")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }); }catch(e){} };
+$("m-back").onclick = ()=>{ show("s-home"); renderHome(); };
+
+/* ---------- welcome ---------- */
+document.querySelectorAll("#role-choices .choice").forEach(b=> b.onclick = ()=>{
+  S.role = b.dataset.role; document.querySelectorAll("#role-choices .choice").forEach(x=>x.setAttribute("aria-pressed", x===b)); $("go-goal").disabled = false; });
+$("go-goal").onclick = ()=>{ mark("start"); if(D){ D.role = S.role; saveData(); } prefillGoal(); show("s-goal"); };
+
+/* ---------- goal ---------- */
+document.querySelectorAll("#seg-choices .choice").forEach(b=> b.onclick = ()=>{
+  S.seg = b.dataset.seg; document.querySelectorAll("#seg-choices .choice").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  $("goal-fields").hidden = false; $("unt-field").hidden = S.seg!=="unt"; $("uni-field").hidden = S.seg!=="uni"; $("go-check").disabled = false; });
+function isoPlus(days){ const d = new Date(); d.setDate(d.getDate()+days); return dayStr(d); }
+function weeksTo(iso){ const ms = new Date(iso+"T00:00:00") - new Date(dayStr(new Date())+"T00:00:00"); return Math.ceil(ms/86400000); }
+function prefillGoal(){
+  const ed = $("exam-date"); ed.min = isoPlus(1); ed.max = isoPlus(365); ed.value = (D && D.examDate && weeksTo(D.examDate)>0) ? D.examDate : isoPlus(56);
+  if(S.seg){ document.querySelectorAll("#seg-choices .choice").forEach(x=> x.setAttribute("aria-pressed", x.dataset.seg===S.seg)); $("goal-fields").hidden = false;
+    $("unt-field").hidden = S.seg!=="unt"; $("uni-field").hidden = S.seg!=="uni"; $("go-check").disabled = false;
+    if(S.seg==="unt" && S.target) $("unt-target").value = S.target; if(S.seg==="uni" && S.target) $("uni-target").value = S.target; }
+  $("g-err").hidden = true; updateWeeksOut();
+}
+function updateWeeksOut(){ const v = $("exam-date").value, days = v ? weeksTo(v) : NaN; $("g-weeks-out").textContent = (days>0 && days<=366) ? L().g_weeks_out(Math.max(1, Math.ceil(days/7))) : ""; }
+$("exam-date").addEventListener("input", ()=>{ updateWeeksOut(); $("g-err").hidden = true; });
+function goalErr(k){ $("g-err").textContent = L()[k]; $("g-err").hidden = false; S.inputErrors++; mark("input_error"); }
+$("go-check").onclick = ()=>{
+  const v = $("exam-date").value, days = /^\d{4}-\d{2}-\d{2}$/.test(v) ? weeksTo(v) : NaN;
+  if(S.seg==="unt"){ const raw = $("unt-target").value.trim(), t = Number(raw); if(!raw || !Number.isInteger(t) || t<50 || t>140){ $("unt-target").focus(); return goalErr("err_target"); } S.target = t; S.goal = Math.round(t/140*100); }
+  else { S.target = parseInt($("uni-target").value,10); S.goal = S.target; }
+  if(!(days>=1 && days<=366)){ $("exam-date").focus(); return goalErr("err_date"); }
+  $("g-err").hidden = true; S.weeks = Math.max(1, Math.ceil(days/7));
+  if(D){ D.examDate = v; } toD(); mark("goal"); startCheck("A"); };
+function startCheck(mode){
+  S.bankMode = mode; S.answers = new Array(8).fill(null); S.qi = 0; S.checkStart = Date.now(); S.qSecs = new Array(8).fill(0); S.qShownAt = Date.now();
+  if(D && D.examDate){ const d = weeksTo(D.examDate); if(d>0) S.weeks = Math.max(1, Math.ceil(d/7)); }
+  show("s-check"); renderQuestion(); }
+
+/* ---------- check ---------- */
+function bankA(){ return QB[S.seg]; }
+function bank(){ return S.bankMode==="B" ? QB2[S.seg].map((q,i)=> Object.assign({}, QB[S.seg][i], q)) : QB[S.seg]; }
+function renderQuestion(){
+  const q = bank()[S.qi], l = L();
+  $("t-c-eyebrow").textContent = S.bankMode==="B" ? l.c_eyebrow_b : l.c_eyebrow; $("q-count").textContent = (S.qi+1)+" / 8"; $("q-progress").style.width = ((S.qi)/8*100)+"%";
+  $("q-topic").textContent = tx(q.topic); $("q-text").textContent = tx(q.q);
+  const box = $("q-opts"); box.innerHTML = "";
+  q.o.map(tx).concat([l.idk]).forEach((txt,i)=>{ const b = document.createElement("button"); b.className="opt"; b.textContent = txt; const val = i<q.o.length ? i : -1;
+    b.setAttribute("aria-pressed", S.answers[S.qi]===val); b.onclick = ()=>{ S.answers[S.qi]=val; renderQuestion(); }; box.appendChild(b); });
+  $("q-next").disabled = S.answers[S.qi]===null; $("q-next").textContent = S.qi===7 ? l.finish : l.next;
+}
+$("q-next").onclick = ()=>{ const now = Date.now(); S.qSecs[S.qi] += Math.round((now - S.qShownAt)/100)/10; S.qShownAt = now; if(S.qi<7){ S.qi++; renderQuestion(); } else { S.checkSecs = Math.round((Date.now()-S.checkStart)/1000); scoreCheck(); mark("check"); show("s-result"); renderResult(); } };
+function scoreCheck(){
+  const b = bank(); S.weak=[]; S.strong=[]; let c=0;
+  b.forEach((q,i)=>{ if(S.answers[i]===q.a){ c++; S.strong.push(i); } else S.weak.push(i); });
+  /* error type: gap = "I don't know", care = wrong in under 15 s, mis = wrong after thinking, slow = right but over 90 s */
+  S.etypes = b.map((q,i)=>{ const a = S.answers[i], t = S.qSecs[i] || 0;
+    if(a===q.a) return t>90 ? "slow" : "ok"; if(a===-1) return "gap"; return t<15 ? "care" : "mis"; });
+  S.correct = c; S.readiness = Math.round(c/8*100);
+  if(D){ D.checks.push({at:Date.now(), seg:S.seg, bank:S.bankMode, readiness:S.readiness, correct:c, secs:S.checkSecs, weak:S.weak.map(i=> b[i].id), errTypes:etCounts()}); toD(); if(S.bankMode==="B") addXP(30); }
+}
+
+/* ---------- result ---------- */
+function renderResult(){
+  const l = L(), gap = Math.max(0, S.goal - S.readiness);
+  $("r-eyebrow").textContent = S.bankMode==="B" ? l.r_eyebrow_b : l.r_eyebrow;
+  const checks = segChecks(); $("r-cmp-box").hidden = checks.length < 2;
+  if(checks.length >= 2){ const first = checks[0], last = checks[checks.length-1]; renderCmp($("r-cmp"), checks.length>4 ? [first].concat(checks.slice(-3)) : checks); $("r-cmp-delta").textContent = l.r_cmp_delta(last.readiness - first.readiness); }
+  $("grant-box").hidden = S.seg!=="unt"; renderGrant();
+  $("r-title").textContent = gap>0 ? l.r_title_gap(gap) : l.r_title_ok;
+  $("r-now").textContent = S.readiness+"%"; $("r-goal").textContent = S.goal+"%"; $("r-gap").textContent = gap;
+  $("r-fill").style.width = S.readiness+"%"; $("r-target").style.left = "calc("+S.goal+"% - 2px)";
+  const tags = (arr, cls, el)=>{ el.innerHTML=""; if(!arr.length){ const li=document.createElement("li"); li.className="tag-ok"; li.textContent=l.r_none; el.appendChild(li); return; }
+    arr.forEach(i=>{ const li=document.createElement("li"); li.className=cls; li.textContent=tx(bank()[i].topic); el.appendChild(li); }); };
+  tags(S.weak,"tag-weak",$("r-weak")); tags(S.strong,"tag-ok",$("r-strong"));
+  renderEmap();
+}
+function etCounts(){ const c = {gap:0, mis:0, care:0, slow:0}; (S.etypes||[]).forEach(t=>{ if(t in c) c[t]++; }); return c; }
+function renderEmap(){
+  const l = L(), box = $("r-emap"); box.innerHTML = ""; let any = false;
+  ["gap","mis","care","slow"].forEach(t=>{
+    const idx = S.etypes.map((e,i)=> e===t ? i : -1).filter(i=> i>=0); if(!idx.length) return; any = true;
+    const d = document.createElement("div"); d.className = "etile "+t;
+    const b = document.createElement("b"); b.textContent = idx.length;
+    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = l.et[t];
+    const sm = document.createElement("small"); sm.textContent = idx.map(i=> tx(bank()[i].topic)).join(", ");
+    const p = document.createElement("p"); p.style.fontSize = "14px"; p.textContent = "→ "+l.ea[t];
+    d.append(b, nm, sm, p); box.appendChild(d); });
+  if(!any){ const p = document.createElement("p"); p.className = "muted"; p.textContent = l.r_none; box.appendChild(p); }
+}
+function renderGrant(){
+  const out = $("grant-out"); out.innerHTML = ""; if(!S.grant) return; const l = L();
+  if(S.grant.err){ const p = document.createElement("p"); p.className = "err"; p.textContent = l.err_grant; out.appendChild(p); return; }
+  const est = Math.round(S.readiness/100*140), diff = est - S.grant.score, d = document.createElement("div"); d.className = "msg "+(diff>=0 ? "ok" : diff>=-10 ? "" : "bad"); d.style.cssText = "display:flex;flex-direction:column;gap:6px;background:"+(diff<0 && diff>=-10 ? "var(--soft-accent2)" : "");
+  const a = document.createElement("p"); a.textContent = l.grant_est(est); const b = document.createElement("b"); b.textContent = diff>=0 ? l.grant_hi : diff>=-10 ? l.grant_mid : l.grant_lo;
+  const n = document.createElement("p"); n.className = "note"; n.textContent = l.grant_note; d.append(a, b, n); out.appendChild(d);
+}
+$("grant-btn").onclick = ()=>{ const raw = $("grant-score").value.trim(), v = Number(raw);
+  if(!raw || !Number.isInteger(v) || v<50 || v>140){ S.grant = {err:true}; S.inputErrors++; mark("input_error"); } else { S.grant = {score:v}; mark("grant"); } renderGrant(); };
+$("go-plan").onclick = ()=>{ mark("plan"); show("s-plan"); renderPlan(); };
+
+/* ---------- plan ---------- */
+function planTopics(){ return S.weak.length ? S.weak.slice() : bankA().map((_,i)=>i).slice(0,3); }
+const HORIZON = 12;
+/* the plan as data: weeks, tasks with stable ids (by topic), so saved ticks survive a new progress check */
+function planModel(){
+  const l = L(), topics = planTopics(), W = Math.min(S.weeks || 8, HORIZON), seg = S.seg, weeks = [], ids = [];
+  if(!seg) return {weeks, ids, topics, W};
+  const studyWeeks = Math.max(1, W-1), per = Math.ceil(topics.length / studyWeeks) || 1, mid = W>=4 ? Math.ceil(W/2)-1 : -1;
+  for(let w=0; w<W; w++){
+    const slice = w<studyWeeks ? topics.slice(w*per, w*per+per) : [], tasks = [];
+    slice.forEach(ti=>{ const q = bankA()[ti], n = tx(q.topic);
+      tasks.push({id:seg+"-"+q.id+"-learn", text:l.p_learn(n)}); tasks.push({id:seg+"-"+q.id+"-practice", text:l.p_practice+" · "+n}); tasks.push({id:seg+"-"+q.id+"-teach", text:l.p_teach+" · "+n}); });
+    if(w===0){ const c = etCounts(); if(c.care) tasks.push({id:seg+"-care", text:l.p_care}); if(c.slow) tasks.push({id:seg+"-slow", text:l.p_slow}); }
+    if(w===mid) tasks.push({id:seg+"-w"+(w+1)+"-progress", text:l.p_progress});
+    if(w===W-1){ tasks.push({id:seg+"-w"+(w+1)+"-review", text:l.p_review}); tasks.push({id:seg+"-w"+(w+1)+"-mock", text:l.p_mock}); }
+    if(!tasks.length) tasks.push({id:seg+"-w"+(w+1)+"-mixed", text:l.p_mixed});
+    tasks.forEach(t=> ids.push(t.id)); weeks.push({slice, tasks});
+  }
+  return {weeks, ids, topics, W};
+}
+function isMastered(ti){ const q = bankA()[ti]; return !!(D && q && D.mastered[q.id] >= 70); }
+function renderPlan(){
+  const l = L(), pm = planModel(), box = $("p-weeks"), done = D ? D.tasks : (S.tasksLocal = S.tasksLocal || {});
+  $("p-title").textContent = l.p_title(pm.W); box.innerHTML = "";
+  $("p-horizon").hidden = !(S.weeks > HORIZON); if(S.weeks > HORIZON) $("p-horizon").textContent = l.p_horizon(S.weeks, HORIZON);
+  const upd = ()=>{ const d = pm.ids.filter(id=> done[id]).length; $("p-done").textContent = l.p_done(d, pm.ids.length); $("p-bar").style.width = (pm.ids.length ? d/pm.ids.length*100 : 0)+"%"; };
+  pm.weeks.forEach((wk, w)=>{
+    const div = document.createElement("div"); div.className = "week";
+    const head = document.createElement("header"); const h = document.createElement("h3"); h.textContent = l.week+" "+(w+1); head.appendChild(h); div.appendChild(head);
+    wk.slice.forEach(ti=>{ const row = document.createElement("div"); row.className = "topicrow";
+      const p = document.createElement("span"); p.className = "pill"+(isMastered(ti) ? " ok" : ""); p.textContent = tx(bankA()[ti].topic) + (isMastered(ti) ? " · ✓ "+l.p_mastered : "");
+      const b = document.createElement("button"); b.type = "button"; b.className = "btn sm"+(isMastered(ti) ? " ghost" : ""); b.textContent = l.p_study; b.onclick = ()=> openTutor(ti);
+      row.append(p, b); div.appendChild(row); });
+    wk.tasks.forEach(t=>{ const lab = document.createElement("label"); lab.className = "task";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.id = "task-"+t.id; cb.checked = !!done[t.id];
+      cb.onchange = ()=>{ done[t.id] = cb.checked; if(D){ addXP(cb.checked ? 10 : -10); } upd(); mark("task"); };
+      const sp = document.createElement("span"); sp.textContent = t.text; lab.append(cb, sp); div.appendChild(lab); });
+    box.appendChild(div); });
+  upd(); $("p-home").hidden = !D;
+  const firstOpen = pm.topics.find(ti=> !isMastered(ti)); S.topicIdx = firstOpen !== undefined ? firstOpen : pm.topics[0];
+}
+function openTutor(ti){ S.topicIdx = ti; S.hints=0; S.tutorPick=null; S.solved=false; S.attempts=0; S.tbScore=null; S.tbTries=0; mark("tutor"); chatTurns = []; $("chat").innerHTML = ""; show("s-tutor"); renderTutor(); }
+$("go-tutor").onclick = ()=> openTutor(S.topicIdx);
+$("go-finish-early").onclick = ()=>{ show("s-feedback"); };
+$("p-home").onclick = ()=>{ show("s-home"); renderHome(); };
+$("t-back").onclick = ()=>{ show("s-plan"); renderPlan(); };
+$("b-plan").onclick = ()=>{ show("s-plan"); renderPlan(); };
+
+/* ---------- tutor ---------- */
+function topicNow(){ return bankA()[S.topicIdx]; }
+let chatTurns = [];
+function renderTutor(keep){
+  const q = topicNow();
+  $("t-topic").textContent = tx(q.topic); $("t-q").textContent = tx(q.q);
+  const box = $("t-opts"); box.innerHTML = "";
+  q.o.map(tx).forEach((txt,i)=>{ const b=document.createElement("button"); b.className="opt"; b.textContent=txt; b.setAttribute("aria-pressed", S.tutorPick===i);
+    if(S.solved && i===q.a) b.classList.add("right");
+    b.onclick=()=>{ if(S.solved) return; S.tutorPick=i; renderTutor(true); }; box.appendChild(b); });
+  const hb = $("t-hints"); hb.innerHTML = "";
+  tx(q.h).slice(0,S.hints).forEach((h,i)=>{ const d=document.createElement("div"); d.className="hint"; d.textContent=(i+1)+". "+h; hb.appendChild(d); });
+  $("t-hint").disabled = S.solved; $("t-check").disabled = S.solved || S.tutorPick===null;
+  $("go-teach").disabled = !S.solved && S.attempts<1;
+  if(!keep){ $("t-feedback").innerHTML=""; $("ph-out").innerHTML=""; $("ph-typed").value=""; $("ph-file").value=""; }
+  renderTerms(q); renderTutors();
+}
+function renderTerms(q){
+  const t = $("terms-table"); t.innerHTML = "";
+  const hr = document.createElement("tr"); ["KZ","RU","EN"].forEach(h=>{ const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); }); t.appendChild(hr);
+  (TERMS[q.id] || []).forEach(([e,r,k])=>{ const tr = document.createElement("tr");
+    [k,r,e].forEach(v=>{ const td = document.createElement("td"); td.textContent = v; tr.appendChild(td); }); t.appendChild(tr); });
+}
+function renderTutors(){
+  const l = L(), box = $("tutor-list"); box.innerHTML = "";
+  TUTORS.filter(t=> t.seg===S.seg).sort((a,b)=> b.g - a.g).forEach(t=>{
+    const row = document.createElement("div"); row.className = "tutor";
+    const who = document.createElement("div"); who.className = "who";
+    const nb = document.createElement("b"); nb.textContent = tx(t.name);
+    const sm = document.createElement("small"); sm.className = "muted"; sm.textContent = tx(SUBJ[t.seg])+" · "+t.langs+" · "+l.t_students(t.s);
+    who.append(nb, sm);
+    const gr = document.createElement("div"); gr.style.cssText = "display:flex;flex-direction:column;align-items:flex-end";
+    const g = document.createElement("span"); g.className = "gr"; g.textContent = l.t_growth(t.g);
+    const gl = document.createElement("small"); gl.className = "muted"; gl.textContent = l.t_growth_lbl; gr.append(g, gl);
+    const a = document.createElement("a"); a.className = "btn sm"; a.href = MEET; a.target = "_blank"; a.rel = "noopener"; a.dataset.tutor = t.id; a.textContent = l.t_call;
+    row.append(who, gr, a); box.appendChild(row); });
+}
+$("t-hint").onclick = ()=>{ const q = topicNow(); if(S.hints < tx(q.h).length){ S.hints++; renderTutor(true); } else { $("t-feedback").innerHTML=""; const m=document.createElement("p"); m.className="msg bad"; m.textContent=L().no_more; $("t-feedback").appendChild(m); } };
+$("t-check").onclick = ()=>{ const q = topicNow(); S.attempts++; const ok = S.tutorPick===q.a; if(ok){ S.solved=true; once("solved_"+S.seg+"_"+q.id, 20); }
+  $("t-feedback").innerHTML=""; const m=document.createElement("p"); m.className="msg "+(ok?"ok":"bad"); m.textContent= ok?L().right:L().wrong; $("t-feedback").appendChild(m); renderTutor(true); };
+/* ---------- "Where did I go wrong?" (photo or typed steps, checked by Claude) ---------- */
+function phMsg(cls){ const o = $("ph-out"); o.innerHTML = ""; const d = document.createElement("div"); d.className = "msg "+cls; d.style.cssText = "display:flex;flex-direction:column;gap:6px"; o.appendChild(d); return d; }
+function phLine(d, text, bold){ const p = document.createElement(bold ? "b" : "p"); p.textContent = text; if(!bold) p.style.fontWeight = "600"; d.appendChild(p); }
+$("ph-check").onclick = async ()=>{
+  const l = L(), f = $("ph-file").files && $("ph-file").files[0], typed = $("ph-typed").value.trim();
+  if(!aiOn()){ phLine(phMsg("bad"), l.ph_noai); return; }
+  const useImg = !!(f && S.imgOK);
+  if(!useImg && !typed){ phLine(phMsg("bad"), f ? l.ph_noimg : l.ph_need); return; }
+  const q = topicNow(); S.photoChecks++; mark("photo_check");
+  $("ph-check").disabled = true; phLine(phMsg(""), l.thinking);
+  const prompt = "A student is solving this practice problem: "+q.q.en+" The correct final answer is: "+en(q.o[q.a])+". "+
+    (useImg ? "The attached image is a photo of the student's handwritten solution. " : "")+
+    (typed ? "The student's typed steps:\n\"\"\"\n"+typed.slice(0,2000)+"\n\"\"\"\n" : "")+
+    "Find the FIRST step where the student made a mistake. Do not write the full correct solution and do not state the final answer. "+
+    "Reply with only JSON: {\"status\": \"correct\" | \"mistake\" | \"unreadable\", \"step\": \"the wrong line, quoted or described\", \"why\": \"one or two sentences on what is wrong\", \"hint\": \"one sentence on what to try next\"}. "+
+    "Write step, why and hint in "+LANG_NAME[S.lang]+".";
+  const opts = {modelTier:"default"}; if(useImg) opts.images = [f];
+  try{
+    const r = await S.sample.json(prompt, opts); const st = r && r.status; S.photoResult = st || "unknown";
+    if(st==="correct"){ const d = phMsg("ok"); phLine(d, l.ph_ok, true); if(r.why) phLine(d, String(r.why)); }
+    else if(st==="mistake"){ const d = phMsg("bad"); phLine(d, l.ph_bad, true); if(r.step) phLine(d, "“"+String(r.step)+"”"); if(r.why) phLine(d, String(r.why)); if(r.hint) phLine(d, l.ph_hint+" "+String(r.hint)); }
+    else { const d = phMsg("bad"); phLine(d, l.ph_unclear, true); if(r && r.hint) phLine(d, String(r.hint)); }
+  }catch(e){
+    if(e && e.code==="images_unavailable"){ S.imgOK = false; updateAIAvailability(); phLine(phMsg("bad"), l.ph_noimg); }
+    else phLine(phMsg("bad"), aiFail(e));
+  }finally{ $("ph-check").disabled = false; }
+};
+
+/* ---------- User's Path Map ---------- */
+function renderMap(){
+  const pu = PATH_UI[S.lang], box = $("map-list"), here = STAGE_OF[current]; box.innerHTML = "";
+  PATH.forEach((st,i)=>{
+    const li = document.createElement("li"); if(i===here) li.className = "here"; else if(st.later) li.className = "later";
+    const n = document.createElement("span"); n.className = "num"; n.textContent = i+1;
+    const d = document.createElement("div"); d.className = "st";
+    const h = document.createElement("h3"); h.textContent = tx(st.name);
+    const tag = i===here ? pu.here : (st.later ? pu.later : null);
+    if(tag){ const t = document.createElement("span"); t.className = "pill"; t.textContent = tag; if(i===here){ t.style.background = "var(--accent)"; t.style.color = "var(--accent-ink)"; } h.appendChild(t); }
+    const p1 = document.createElement("p"); const b1 = document.createElement("b"); b1.textContent = pu.pain+" "; p1.append(b1, tx(st.pain));
+    const p2 = document.createElement("p"); const b2 = document.createElement("b"); b2.textContent = pu.proto+" "; p2.append(b2, tx(st.feat));
+    d.append(h, p1, p2); li.append(n, d); box.appendChild(li); });
+}
+function openMap(){ renderMap(); $("map-modal").hidden = false; mark("path_map"); $("map-close").focus(); }
+function closeMap(){ $("map-modal").hidden = true; $("open-map").focus(); }
+$("open-map").onclick = openMap; $("map-close").onclick = closeMap;
+$("map-modal").addEventListener("click", e=>{ if(e.target === $("map-modal")) closeMap(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("map-modal").hidden) closeMap(); });
+
+/* ---------- AI helper (Claude) on every screen ---------- */
+const PERM = ["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
+function aiOn(){ return !!S.sample && !S.aiBlocked; }
+function aiFail(e){ if(e && PERM.includes(e.code)){ S.aiBlocked = true; updateAIAvailability(); } if(e && e.code==="rate_limited") return L().ai_limit; return L().ai_err; }
+/* AI option B: outside Claude, the page calls its own server function (/api/ai), which keeps the API key */
+const AI_ENDPOINT = "api/ai";
+function fileToJpeg(file){ return new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>{ const img = new Image();
+  img.onload = ()=>{ const k = Math.min(1, 1280/Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", 0.85).split(",")[1]); };
+  img.onerror = ()=> rej(new Error("image")); img.src = r.result; }; r.onerror = ()=> rej(new Error("read")); r.readAsDataURL(file); }); }
+function parseJSON(t){ const a = t.indexOf("{"), b = t.lastIndexOf("}"); if(a<0 || b<a) throw {code:"bad_json"}; return JSON.parse(t.slice(a, b+1)); }
+function serverSampler(info){
+  async function call(messages, opts){
+    opts = opts || {}; const body = {messages, maxTokens: opts.maxTokens || 700};
+    if(opts.images && opts.images.length) body.images = [{media_type:"image/jpeg", data: await fileToJpeg(opts.images[0])}];
+    let r; try{ r = await fetch(AI_ENDPOINT, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)}); }catch(e){ throw {code:"network"}; }
+    if(!r.ok) throw {code: r.status===429 ? "rate_limited" : "server_error"};
+    const j = await r.json(); const text = String(j.text || "").trim(); if(!text) throw {code:"empty"};
+    if(opts.onText) opts.onText({text}); return {text};
+  }
+  const f = (m, opts)=> call(typeof m === "string" ? [{role:"user", content:m}] : m, opts);
+  f.json = async (prompt, opts)=> parseJSON((await call([{role:"user", content:prompt}], Object.assign({}, opts, {maxTokens:500}))).text);
+  f.limits = async ()=> (info.images ? {images:{mediaTypes:["image/jpeg","image/png","image/webp"]}} : {});
+  return f;
+}
+function updateAIAvailability(){
+  const on = aiOn(); $("ai-off").hidden = on; $("chat-in").disabled = !on; $("chat-send").disabled = !on;
+  document.querySelectorAll("#ai-chips button").forEach(b=> b.disabled = !on);
+  $("ph-file-wrap").hidden = !(on && S.imgOK);
+}
+function renderChips(){ const box = $("ai-chips"); box.innerHTML = "";
+  L().chips.forEach(c=>{ const b = document.createElement("button"); b.type = "button"; b.textContent = c; b.onclick = ()=> askAI(c); box.appendChild(b); });
+  updateAIAvailability(); }
+function openAI(prefill){
+  $("ai-panel").hidden = false; $("ai-fab").hidden = true; mark("ai_open");
+  if(!$("chat").children.length) addBubble("ai", L().ai_hello);
+  if(prefill && aiOn()) askAI(prefill); else if(aiOn()) $("chat-in").focus();
+}
+function closeAI(){ $("ai-panel").hidden = true; $("ai-fab").hidden = false; }
+$("ai-fab").onclick = ()=> openAI(); $("ai-close").onclick = closeAI;
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("ai-panel").hidden) closeAI(); });
+$("go-ai-result").onclick = ()=> openAI(L().ai_result_q);
+$("t-ask-ai").onclick = ()=> openAI(L().ask_task_q);
+$("chat-send").onclick = ()=> askAI(); $("chat-in").addEventListener("keydown", e=>{ if(e.key==="Enter") askAI(); });
+function etSummary(){ const c = etCounts(); return Object.keys(c).filter(k=> c[k]).map(k=> c[k]+" x "+T.en.et[k]).join(", ") || "none"; }
+function aiRules(){
+  let ctx = "Student: "+(S.seg==="unt" ? "Grade 11, preparing for the Kazakhstan UNT profile maths exam" : S.seg==="uni" ? "university Year 1-2 student preparing for a calculus exam" : "has not chosen a goal yet")+".";
+  if(S.seg && S.checkSecs!==null) ctx += " Goal Check result: readiness "+S.readiness+"%, needed for the goal "+S.goal+"%, "+S.weeks+" weeks left. Weak topics: "+
+    (S.weak.map(i=> bank()[i].topic.en).join(", ") || "none")+". Error types: "+etSummary()+".";
+  if(S.seg && (current==="s-tutor" || current==="s-teach")){ const q = topicNow();
+    ctx += " The student is now on this practice problem: "+q.q.en+" (topic: "+q.topic.en+"). Options: "+q.o.map(en).join(" | ")+". Never reveal its final answer or which option is correct."; }
+  return "You are the AI helper inside StudyMate AI, a learning coach for students in Kazakhstan. "+ctx+
+    " Help the student learn: give hints and guiding questions instead of ready answers, short steps, under 120 words, plain text without Markdown."+
+    " If asked for a similar problem, give one new problem without its solution."+
+    " If asked to explain in Kazakh with English terms, reply in Kazakh and put the English term in brackets after each key term. Otherwise reply in "+LANG_NAME[S.lang]+".";
+}
+async function askAI(override){
+  const inp = $("chat-in"), text = (typeof override === "string" ? override : inp.value).trim(); if(!text) return;
+  if(!aiOn()){ updateAIAvailability(); return; } if(S.aiBusy) return; S.aiBusy = true;
+  if(typeof override !== "string") inp.value = ""; S.aiQuestions++;
+  addBubble("me", text); const ai = addBubble("ai", L().thinking);
+  chatTurns.push({role:"user", content:text});
+  try{
+    const res = await S.sample([{role:"user", content:aiRules()}].concat(chatTurns.slice(-10)),
+      {cache:false, modelTier:"quick", onText:({text})=>{ ai.textContent = text; const b = $("ai-body"); b.scrollTop = b.scrollHeight; }});
+    ai.textContent = res.text; chatTurns.push({role:"assistant", content:res.text});
+  }catch(e){ ai.textContent = (e && e.text) ? e.text : aiFail(e); chatTurns.pop(); }
+  finally{ S.aiBusy = false; }
+}
+function addBubble(who, text){ const d=document.createElement("div"); d.className="bubble "+who; d.textContent=text; $("chat").appendChild(d); const b=$("ai-body"); b.scrollTop=b.scrollHeight; return d; }
+$("go-teach").onclick = ()=>{ mark("teach_open"); $("b-title").textContent = L().b_title(tx(topicNow().topic)); $("b-result").hidden=true; $("b-text").value=""; $("b-check").disabled=true; show("s-teach"); };
+
+/* ---------- teach-back ---------- */
+$("b-text").addEventListener("input", ()=>{ $("b-check").disabled = $("b-text").value.trim().length < 40; });
+function ruleScore(text, q){
+  const t = text.toLowerCase(); const hits = q.k.map(group=> group.some(w=> t.includes(w.toLowerCase())));
+  const words = t.split(/\s+/).filter(Boolean).length;
+  let s = Math.round(hits.filter(Boolean).length / q.k.length * 100);
+  if(words < 15) s = Math.min(s, 50);
+  return { score:s, missing: hits.map((h,i)=> h ? null : KEY_NAMES[S.lang][i]).filter(Boolean) };
+}
+$("b-check").onclick = async ()=>{
+  const q = topicNow(), text = $("b-text").value.trim(), l = L(); S.tbTries++;
+  $("b-check").disabled = true; $("b-verdict").textContent = l.thinking; $("b-result").hidden = false; $("b-missing").textContent=""; $("b-pct").textContent="…";
+  let res = null;
+  if(aiOn()){
+    try{
+      const out = await S.sample.json("You check a student's explanation (Teach-back) for the topic \""+q.topic.en+"\". The practice problem was: "+q.q.en+
+        ". Student's explanation:\n\"\"\""+text.slice(0,2000)+"\"\"\"\nScore real understanding 0-100 (the method and why it works, not just the final number). Reply with only JSON: {\"score\": number, \"missing\": [up to 3 short phrases in "+LANG_NAME[S.lang]+" naming ideas the student did not explain]}",
+        {modelTier:"quick"});
+      if(out && typeof out.score === "number") { res = {score:Math.max(0,Math.min(100,Math.round(out.score))), missing:Array.isArray(out.missing)?out.missing.slice(0,3).map(String):[]}; S.tbMode="ai"; }
+    }catch(e){ aiFail(e); res = null; }
+  }
+  if(!res){ res = ruleScore(text, q); S.tbMode="rules"; }
+  S.tbScore = res.score; mark("teach_done");
+  if(D){ const prev = D.mastered[q.id] || 0; D.mastered[q.id] = Math.max(prev, res.score); if(res.score>=70) once("mastered_"+S.seg+"_"+q.id, 40); else saveData(); }
+  const color = res.score>=70 ? "var(--ok)" : res.score>=40 ? "var(--warn)" : "var(--bad)";
+  $("b-pct").textContent = res.score+"%"; $("b-ring").style.background = "conic-gradient("+color+" "+(res.score*3.6)+"deg, var(--chip) 0)";
+  $("b-verdict").textContent = res.score>=70 ? l.b_pass : res.score>=40 ? l.b_mid : l.b_low;
+  $("b-missing").textContent = res.missing.length ? l.b_missing+" "+res.missing.join(", ") : l.b_allgood;
+  $("b-check").disabled = false;
+};
+$("b-retry").onclick = ()=>{ $("b-result").hidden = true; $("b-text").focus(); };
+$("go-feedback").onclick = ()=>{ show("s-feedback"); };
+
+/* ---------- feedback ---------- */
+function renderFeedbackControls(){
+  const l = L();
+  document.querySelectorAll("#s-feedback .scale").forEach(box=>{ const k = box.dataset.key; box.innerHTML="";
+    for(let i=1;i<=5;i++){ const b=document.createElement("button"); b.textContent=i; b.setAttribute("aria-pressed", S.fb[k]===i); b.onclick=()=>{ S.fb[k]=i; renderFeedbackControls(); }; box.appendChild(b); } });
+  document.querySelectorAll("#s-feedback .choices").forEach(box=>{ const k = box.dataset.key; box.innerHTML="";
+    [["yes",l.yes],["maybe",l.maybe],["no",l.no]].forEach(([v,lab])=>{ const b=document.createElement("button"); b.className="choice"; b.style.padding="10px 14px";
+      const bb=document.createElement("b"); bb.textContent=lab; b.appendChild(bb); b.setAttribute("aria-pressed", S.fb[k]===v); b.onclick=()=>{ S.fb[k]=v; renderFeedbackControls(); }; box.appendChild(b); }); });
+  $("f-send").disabled = !(S.fb.ease && S.fb.useful && S.fb.again && S.fb.pay);
+}
+$("f-send").onclick = ()=>{
+  mark("feedback");
+  const result = { v:"0.4", ts:new Date().toISOString(), role:S.role, lang:S.lang, seg:S.seg, target:S.target, weeks:S.weeks,
+    account: USER ? (USER.guest ? "guest" : "registered") : null, authErrors:S.authErrors, inputErrors:S.inputErrors,
+    progress: D ? { checks: segChecks().map(c=> ({bank:c.bank, readiness:c.readiness})), mastered: Object.keys(D.mastered).filter(k=> D.mastered[k]>=70).length,
+      tasksDone: planModel().ids.filter(id=> D.tasks[id]).length, xp:D.xp, streak:streakNow(), tier: D.tier, invites:D.invites, mentorSent:D.sent.mentor, parentSent:D.sent.parent } : null,
+    grant: S.grant && !S.grant.err ? {score:S.grant.score, est:Math.round(S.readiness/100*140)} : null,
+    check:{ correct:S.correct ?? null, readiness:S.readiness, goal:S.goal, secs:S.checkSecs, weak:S.weak.map(i=>bank()[i].id), errTypes: S.seg ? etCounts() : null },
+    tutor:{ topic: S.seg ? topicNow().id : null, hints:S.hints, attempts:S.attempts, solved:S.solved, liveTutorClicks:S.liveClicks, tutorChosen:S.tutorChosen, photoChecks:S.photoChecks, photoResult:S.photoResult },
+    ai:{ available: aiOn(), via:S.aiVia, questions:S.aiQuestions },
+    teach:{ score:S.tbScore, tries:S.tbTries, mode:S.tbMode },
+    steps:S.steps, totalSecs:Math.round((Date.now()-S.startedAt)/1000),
+    fb:{ ease:S.fb.ease, useful:S.fb.useful, again:S.fb.again, pay:S.fb.pay, comment:$("f-comment").value.trim().slice(0,500) } };
+  $("d-code").textContent = "SM1|" + JSON.stringify(result);
+  if(D){ D.lastResult = result; saveData(); } $("d-home").hidden = !D; show("s-done");
+};
+$("d-copy").onclick = ()=>{
+  const txt = $("d-code").textContent;
+  const ok = ()=>{ $("d-copied").textContent = L().copied; $("d-copied").hidden=false; };
+  const fail = ()=>{ const r=document.createRange(); r.selectNodeContents($("d-code")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); $("d-copied").textContent=L().copy_fail; $("d-copied").hidden=false; };
+  try{ navigator.clipboard.writeText(txt).then(ok, fail); }catch(e){ fail(); }
+};
+$("d-restart").onclick = ()=>{ S.fb = {ease:null, useful:null, again:null, pay:null}; $("f-comment").value = ""; renderFeedbackControls(); prefillGoal(); show("s-goal"); };
+$("d-home").onclick = ()=>{ show("s-home"); renderHome(); };
+
+/* ---------- boot ---------- */
+const savedLang = load("lang"); if(savedLang==="ru"||savedLang==="en"||savedLang==="kk") S.lang = savedLang;
+const savedTheme = load("theme"); if(savedTheme==="dark"||savedTheme==="light") document.documentElement.setAttribute("data-theme", savedTheme);
+seedDemo(); applyLang(); show("s-auth");
+const sess = load("session"), U = users();
+if(sess==="guest") startSession({id:"guest", name:null, email:null, guest:true});
+else if(sess && U[sess]) startSession({id:U[sess].id, name:U[sess].name, email:sess, guest:false});
+function setAiLabel(x){ S.aiLabel = x; $("t-ai-sub").textContent = L().ai_sub_by(x); }
+if(window.claude && typeof window.claude.use === "function"){
+  window.claude.use("sample").then(s=>{ if(!s) return; S.sample = s; S.aiVia = "claude"; setAiLabel("Claude"); updateAIAvailability();
+    try{ s.limits().then(c=>{ S.imgOK = !!(c && c.images); if(c && c.images) $("ph-file").accept = c.images.mediaTypes.join(","); updateAIAvailability(); }).catch(()=>{}); }catch(e){}
+  }).catch(()=>{});
+} else if(/^https?:$/.test(location.protocol)){
+  fetch(AI_ENDPOINT, {method:"GET"}).then(r=> r.ok ? r.json() : null).then(info=>{
+    if(!info || !info.ok) return; S.sample = serverSampler(info); S.aiVia = "server"; S.imgOK = !!info.images; setAiLabel(String(info.label || "AI").slice(0,40)); updateAIAvailability(); }).catch(()=>{});
+}
+})();
+</script>
+</body>
+</html>
