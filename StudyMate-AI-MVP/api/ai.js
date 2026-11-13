@@ -1,7 +1,8 @@
 // StudyMate AI: server function for the AI helper (AI option B).
 // Runs on Vercel as /api/ai. The API key stays here, in the hosting settings, and never reaches the browser.
 //
-// Provider A (default): Anthropic Claude. Set ANTHROPIC_API_KEY (and optionally AI_MODEL).
+// Easiest: Google Gemini. Set only GEMINI_API_KEY (free key from https://aistudio.google.com/apikey); the model is picked automatically.
+// Provider A: Anthropic Claude. Set ANTHROPIC_API_KEY (and optionally AI_MODEL).
 // Provider B: any OpenAI-compatible API (Google Gemini, Groq, OpenRouter...). Set AI_API_KEY, AI_BASE_URL, AI_MODEL,
 //             and AI_IMAGES=1 if the model accepts images.
 // Optional: AI_LABEL (name shown under "AI helper"), AI_MAX_PER_10MIN (requests per visitor, default 20),
@@ -13,7 +14,14 @@ const SYSTEM = "You are the AI helper inside StudyMate AI, a learning coach for 
   "Give hints and guiding questions rather than ready answers, unless the instructions in the conversation ask for a JSON verdict.";
 const hits = new Map(); // best-effort rate limit per visitor (resets when the function restarts)
 
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai";
+let geminiModel = null; // found once per function start
+
 function config() {
+  if (process.env.GEMINI_API_KEY) {
+    return { kind: "openai", gemini: true, key: process.env.GEMINI_API_KEY.trim(), base: GEMINI_BASE, model: process.env.AI_MODEL || geminiModel,
+      images: process.env.AI_IMAGES !== "0", label: process.env.AI_LABEL || "Gemini" };
+  }
   if (process.env.ANTHROPIC_API_KEY) {
     return { kind: "anthropic", key: process.env.ANTHROPIC_API_KEY, model: process.env.AI_MODEL || "claude-haiku-5-5",
       images: process.env.AI_IMAGES !== "0", label: process.env.AI_LABEL || "Claude" };
@@ -67,7 +75,24 @@ async function callAnthropic(c, messages, image, maxTokens) {
   return { text: (j.content || []).filter(b => b.type === "text").map(b => b.text).join("") };
 }
 
+// picks the newest general "flash" model this key can use, so nobody has to type a model name
+async function pickGeminiModel(c) {
+  if (c.model) return c.model;
+  const fallback = "gemini-2.5-flash";
+  try {
+    const r = await fetch(c.base + "/models", { headers: { "authorization": "Bearer " + c.key } });
+    const j = await r.json().catch(() => ({}));
+    const ids = (j.data || []).map(m => String(m.id || "").replace(/^models\//, ""))
+      .filter(id => /^gemini-[\d.]+-flash$/.test(id));
+    const ver = id => parseFloat(id.split("-")[1]) || 0;
+    ids.sort((a, b) => ver(b) - ver(a));
+    geminiModel = ids[0] || fallback;
+  } catch { geminiModel = fallback; }
+  return geminiModel;
+}
+
 async function callOpenAI(c, messages, image, maxTokens) {
+  if (c.gemini) c.model = await pickGeminiModel(c);
   const msgs = [{ role: "system", content: SYSTEM }].concat(messages.map(m => ({ role: m.role, content: m.content })));
   if (image) { const last = msgs[msgs.length - 1];
     last.content = [{ type: "text", text: last.content }, { type: "image_url", image_url: { url: `data:${image.media_type};base64,${image.data}` } }]; }
