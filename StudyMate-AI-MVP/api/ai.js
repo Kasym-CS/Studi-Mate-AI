@@ -74,9 +74,9 @@ async function callAnthropic(c, messages, image, maxTokens) {
   return { text: (j.content || []).filter(b => b.type === "text").map(b => b.text).join("") };
 }
 
-async function request(url, options) {
+async function request(url, options, ms) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
+  const timer = setTimeout(() => controller.abort(), ms || 25000);
   try { return await fetch(url, { ...options, signal: controller.signal }); }
   finally { clearTimeout(timer); }
 }
@@ -103,7 +103,8 @@ async function geminiCandidates(c) {
     const rank = id => (id.includes("preview") ? 2 : 0) + (/-\d+-\d+$/.test(id) ? 1 : 0);
     found.sort((a, b) => rank(a) - rank(b) || ver(b) - ver(a) || a.length - b.length);
     const flash = found.filter(id => !id.includes("lite")), lite = found.filter(id => id.includes("lite"));
-    geminiList = Array.from(new Set([flash[0], lite[0]].concat(flash.slice(1, 3), lite.slice(1, 2), GEMINI_ALIASES).filter(Boolean))).slice(0, 6);
+    // flash-lite first: it answers in a few seconds and is rarely overloaded; the bigger flash model is the backup
+    geminiList = Array.from(new Set([lite[0], flash[0]].concat(flash.slice(1, 3), lite.slice(1, 2), GEMINI_ALIASES).filter(Boolean))).slice(0, 6);
   }
   const list = geminiList.filter(m => !deadModels.has(m));
   return geminiWorking && list.includes(geminiWorking) ? [geminiWorking].concat(list.filter(m => m !== geminiWorking)) : list;
@@ -114,7 +115,8 @@ async function geminiOnce(c, model, contents, maxTokens, thinking) {
   if (thinking) generationConfig.thinkingConfig = /^gemini-[3-9]/.test(model) ? { thinkingLevel: "low" } : { thinkingBudget: 512 };
   const url = `${c.base}/models/${encodeURIComponent(model)}:generateContent`;
   const r = await request(url, {method: "POST", headers: {"x-goog-api-key": c.key, "content-type": "application/json"},
-    body: JSON.stringify({system_instruction: {parts: [{text: SYSTEM}]}, contents, generationConfig})});
+    body: JSON.stringify({system_instruction: {parts: [{text: SYSTEM}]}, contents, generationConfig})}, 15000)
+    .catch(e => ({ ok: false, status: 504, json: async () => ({ error: { message: "timeout on " + model } }) }));
   const j = await r.json().catch(() => ({}));
   if (!r.ok) return {status: r.status, error: j?.error?.message || "Gemini request rejected"};
   const text = (j.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("");
@@ -128,10 +130,10 @@ async function callGemini(c, messages, image, maxTokens) {
   const started = Date.now();
   let last = {status: 502, error: "no Gemini model answered"};
   for (const model of await geminiCandidates(c)) {
-    if (Date.now() - started > 40000) break;
+    if (Date.now() - started > 26000) break; // the page waits up to 45 s
     let out = await geminiOnce(c, model, contents, maxTokens, true);
     if (out.error && out.status === 400 && !/api key|permission/i.test(out.error)) out = await geminiOnce(c, model, contents, maxTokens, false);
-    if (out.error && (out.status === 503 || out.status === 429)) { await new Promise(r => setTimeout(r, 1500)); out = await geminiOnce(c, model, contents, maxTokens, true); }
+    if (out.error && (out.status === 503 || out.status === 429) && Date.now() - started < 15000) { await new Promise(r => setTimeout(r, 1500)); out = await geminiOnce(c, model, contents, maxTokens, true); }
     if (!out.error) { geminiWorking = model; return out; }
     console.error("Gemini model failed", model, out.status, out.error);
     if (out.status === 404) deadModels.add(model);
