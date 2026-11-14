@@ -2573,7 +2573,7 @@ function serverSampler(info){
   async function call(messages, opts){
     opts = opts || {}; const body = {messages, maxTokens: opts.maxTokens || 700};
     if(opts.images && opts.images.length) body.images = [{media_type:"image/jpeg", data: await fileToJpeg(opts.images[0])}];
-    const controller = new AbortController(), timer = setTimeout(()=>controller.abort(), 45000);
+    const controller = new AbortController(), timer = setTimeout(()=>controller.abort(), 55000);
     let r; try{ r = await fetch(AI_ENDPOINT, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body), signal:controller.signal}); }catch(e){ throw {code:e.name==="AbortError" ? "provider_timeout" : "network"}; }finally{ clearTimeout(timer); }
     if(!r.ok){ const j = await r.json().catch(()=>({})); throw {code:j.error || (r.status===429 ? "quota_exceeded" : "server_error")}; }
     const j = await r.json(); const text = String(j.text || "").trim(); if(!text) throw {code:"empty"};
