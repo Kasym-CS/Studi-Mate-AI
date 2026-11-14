@@ -1,7 +1,8 @@
 {
   "name": "studymate-ai-mvp",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "private": true,
   "description": "StudyMate AI MVP: single-page app plus one serverless function for the AI helper",
-  "engines": { "node": ">=18" }
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test tests/*.test.js" }
 }

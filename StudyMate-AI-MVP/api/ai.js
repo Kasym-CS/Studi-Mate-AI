@@ -10,16 +10,15 @@
 
 const LIMITS = { messages: 12, chars: 12000, imageBytes: 3_500_000, maxTokens: 800 };
 const SYSTEM = "You are the AI helper inside StudyMate AI, a learning coach for school and university students in Kazakhstan. " +
-  "Only help with studying (UNT and university subjects, study plans and exam preparation). Politely refuse anything else. " +
+  "Only help with studying (UNT maths, calculus, study plans and exam preparation). Politely refuse anything else. " +
   "Give hints and guiding questions rather than ready answers, unless the instructions in the conversation ask for a JSON verdict.";
 const hits = new Map(); // best-effort rate limit per visitor (resets when the function restarts)
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai";
-let geminiModel = null; // found once per function start
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 function config() {
   if (process.env.GEMINI_API_KEY) {
-    return { kind: "openai", gemini: true, key: process.env.GEMINI_API_KEY.trim(), base: GEMINI_BASE, model: process.env.AI_MODEL || geminiModel,
+    return { kind: "gemini", key: process.env.GEMINI_API_KEY.trim(), base: GEMINI_BASE, model: process.env.GEMINI_MODEL || process.env.AI_MODEL || "gemini-2.5-flash",
       images: process.env.AI_IMAGES !== "0", label: process.env.AI_LABEL || "Gemini" };
   }
   if (process.env.ANTHROPIC_API_KEY) {
@@ -75,81 +74,42 @@ async function callAnthropic(c, messages, image, maxTokens) {
   return { text: (j.content || []).filter(b => b.type === "text").map(b => b.text).join("") };
 }
 
-// Gemini: try several "flash" models in order and remember the first one that answers,
-// so nobody has to type a model name and a retired or quota-limited model does not break the helper.
-const GEMINI_FALLBACKS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-flash-latest"];
-let geminiList = null;
-
-async function geminiCandidates(c) {
-  if (process.env.AI_MODEL) return [process.env.AI_MODEL];
-  if (geminiModel) return [geminiModel].concat(GEMINI_FALLBACKS.filter(m => m !== geminiModel));
-  if (geminiList) return geminiList;
-  let found = [];
-  try {
-    const r = await fetch(c.base + "/models", { headers: { "authorization": "Bearer " + c.key } });
-    const j = await r.json().catch(() => ({}));
-    found = (j.data || []).map(m => String(m.id || "").replace(/^models\//, ""))
-      .filter(id => /^gemini-[\d.]+-flash(-lite)?$/.test(id));
-  } catch {}
-  const ver = id => parseFloat(id.split("-")[1]) || 0;
-  found.sort((a, b) => ver(b) - ver(a) || a.length - b.length);
-  geminiList = Array.from(new Set(GEMINI_FALLBACKS.concat(found))).slice(0, 6);
-  return geminiList;
+async function request(url, options) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
 }
 
-function authError(status, msg) {
-  return status === 401 || status === 403 || /api key|api_key|permission|unauthenticated/i.test(msg || "");
-}
-
-async function chatOnce(c, model, msgs, maxTokens, extra) {
-  const body = Object.assign({ model, max_tokens: maxTokens, messages: msgs }, extra || {});
-  const r = await fetch(c.base + "/chat/completions", { method: "POST",
-    headers: { "authorization": "Bearer " + c.key, "content-type": "application/json" }, body: JSON.stringify(body) });
+async function callGemini(c, messages, image, maxTokens) {
+  const contents = messages.map(m => ({role: m.role === "assistant" ? "model" : "user", parts: [{text: m.content}]}));
+  if (image) contents[contents.length - 1].parts.push({inline_data: {mime_type: image.media_type, data: image.data}});
+  const url = `${c.base}/models/${encodeURIComponent(c.model)}:generateContent`;
+  const r = await request(url, {method: "POST", headers: {"x-goog-api-key": c.key, "content-type": "application/json"},
+    body: JSON.stringify({system_instruction: {parts: [{text: SYSTEM}]}, contents,
+      generationConfig: {maxOutputTokens: maxTokens, temperature: 0.5}})});
   const j = await r.json().catch(() => ({}));
-  const err = Array.isArray(j) ? j[0]?.error : j?.error;
-  if (!r.ok) return { status: r.status, error: err?.message || ("HTTP " + r.status) };
-  const content = j?.choices?.[0]?.message?.content;
-  const text = Array.isArray(content) ? content.map(p => p.text || "").join("") : String(content || "");
-  if (!text.trim()) return { status: 502, error: "empty answer (finish_reason: " + (j?.choices?.[0]?.finish_reason || "?") + ")" };
-  return { text, model };
+  if (!r.ok) return {status: r.status, error: j?.error?.message || "Gemini request rejected"};
+  return {text: (j.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("")};
 }
 
 async function callOpenAI(c, messages, image, maxTokens) {
   const msgs = [{ role: "system", content: SYSTEM }].concat(messages.map(m => ({ role: m.role, content: m.content })));
   if (image) { const last = msgs[msgs.length - 1];
     last.content = [{ type: "text", text: last.content }, { type: "image_url", image_url: { url: `data:${image.media_type};base64,${image.data}` } }]; }
-  if (!c.gemini) return chatOnce(c, c.model, msgs, maxTokens);
-
-  // Gemini "thinking" models spend output tokens on reasoning, so give them room and keep reasoning low
-  const budget = maxTokens + 1500;
-  let last = { status: 502, error: "no model answered" };
-  for (const model of await geminiCandidates(c)) {
-    let out = await chatOnce(c, model, msgs, budget, { reasoning_effort: "low" });
-    if (out.error && out.status === 400 && !authError(out.status, out.error)) out = await chatOnce(c, model, msgs, budget);
-    if (!out.error) { geminiModel = model; return out; }
-    console.error("Gemini model failed", model, out.status, out.error);
-    last = out;
-    if (authError(out.status, out.error)) break; // a bad key fails on every model
-  }
-  return last;
+  const r = await request(c.base + "/chat/completions", { method: "POST",
+    headers: { "authorization": "Bearer " + c.key, "content-type": "application/json" },
+    body: JSON.stringify({ model: c.model, max_tokens: maxTokens, messages: msgs }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) return { status: r.status, error: j?.error?.message || "upstream error" };
+  const content = j?.choices?.[0]?.message?.content;
+  return { text: Array.isArray(content) ? content.map(p => p.text || "").join("") : String(content || "") };
 }
 
 module.exports = async function handler(req, res) {
   res.setHeader("cache-control", "no-store");
   const c = config();
-  if (req.method === "GET") {
-    const test = /[?&]test=1/.test(req.url || "");
-    if (!test) return res.status(200).json(c ? { ok: true, images: c.images, label: c.label } : { ok: false });
-    // diagnostic: open /api/ai?test=1 in the browser to see whether the key and model work (the key itself is never shown)
-    if (!c) return res.status(200).json({ ok: false, problem: "No key found. Add GEMINI_API_KEY in Vercel → Settings → Environment Variables, then Redeploy." });
-    if (limited(req)) return res.status(429).json({ ok: false, problem: "too many requests, wait 10 minutes" });
-    try {
-      const out = c.kind === "anthropic" ? await callAnthropic(c, [{ role: "user", content: "Reply with the single word OK." }], null, 50)
-        : await callOpenAI(c, [{ role: "user", content: "Reply with the single word OK." }], null, 50);
-      return res.status(200).json(out.error ? { ok: false, provider: c.label, status: out.status, problem: out.error }
-        : { ok: true, provider: c.label, model: out.model || c.model, answer: out.text.slice(0, 40) });
-    } catch (e) { return res.status(200).json({ ok: false, provider: c.label, problem: String(e && e.message) }); }
-  }
+  if (req.method === "GET") return res.status(200).json(c ? { ok: true, images: c.images, label: c.label, provider: c.kind, model: c.model } : { ok: false, error: "missing_server_api_key" });
   if (req.method !== "POST") return res.status(405).json({ error: "method not allowed" });
   if (!c) return res.status(503).json({ error: "AI is not configured" });
   const allowed = process.env.ALLOWED_ORIGIN;
@@ -166,11 +126,12 @@ module.exports = async function handler(req, res) {
   const maxTokens = Math.min(LIMITS.maxTokens, Math.max(50, parseInt(body.maxTokens, 10) || 600));
 
   try {
-    const out = c.kind === "anthropic" ? await callAnthropic(c, messages, image, maxTokens) : await callOpenAI(c, messages, image, maxTokens);
-    if (out.error) { console.error("AI provider error", out.status, out.error); return res.status(out.status === 429 ? 429 : 502).json({ error: "AI provider error" }); }
+    const out = c.kind === "gemini" ? await callGemini(c, messages, image, maxTokens) : c.kind === "anthropic" ? await callAnthropic(c, messages, image, maxTokens) : await callOpenAI(c, messages, image, maxTokens);
+    if (out.error) { console.error("AI provider error", out.status, out.error); const code = out.status === 400 ? "invalid_request" : out.status === 401 || out.status === 403 ? "invalid_key_or_permissions" : out.status === 404 ? "model_unavailable" : out.status === 429 ? "quota_exceeded" : "provider_unavailable"; return res.status(out.status === 429 ? 429 : 502).json({ error: code }); }
+    if (!out.text || !out.text.trim()) return res.status(502).json({error:"empty_response"});
     return res.status(200).json({ text: out.text });
   } catch (e) {
     console.error("AI call failed", e && e.message);
-    return res.status(502).json({ error: "AI call failed" });
+    return res.status(502).json({ error: e?.name === "AbortError" ? "provider_timeout" : "provider_unavailable" });
   }
 };

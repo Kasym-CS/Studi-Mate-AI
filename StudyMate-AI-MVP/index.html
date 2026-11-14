@@ -29,7 +29,7 @@
 [hidden]{display:none!important}
 html{background:var(--bg)}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
-  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 96px}
+  margin:0;padding-left:max(12px, env(safe-area-inset-left, 0px));padding-right:max(12px, env(safe-area-inset-right, 0px));padding-block:16px 96px}
 .app{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px}
@@ -197,6 +197,19 @@ input[type=email],input[type=password],input[type=date]{font:inherit;color:var(-
 pre.code.sum{word-break:normal;overflow-wrap:anywhere;font-family:var(--body);font-size:14px;line-height:1.5;border-style:solid}
 .demo .creds{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
 @media (max-width:480px){.stat b{font-size:20px}.stat{padding:10px}h2{font-size:22px}.card{padding:16px}}
+@media (max-width:560px){
+  .app{gap:12px}.brand h1{font-size:18px}.top{align-items:flex-start}
+  .tools{width:100%;justify-content:space-between}.card{border-radius:14px;padding:16px 14px}
+  .choices,.grid2{grid-template-columns:minmax(0,1fr)}
+  .btn,.choice,.opt,.iconbtn,.subjchips button,.chips button{min-height:44px;touch-action:manipulation}
+  input,select,textarea{font-size:16px!important;min-height:44px}
+  .row>.btn{justify-content:center}.row>.btn:first-child:last-child{width:100%}
+  .panel{height:92dvh;max-height:92dvh}.panel footer{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))}
+  .panel footer #chat-in{min-width:0;flex:1}.panel footer #chat-send{padding:10px 12px}
+  ol.rail li{font-size:10px;white-space:normal;line-height:1.25}
+  .stats,.badges{gap:6px}.stat{min-width:0}.stat b{font-size:18px}
+  .cmp .ln{grid-template-columns:minmax(72px,110px) minmax(0,1fr) 42px;gap:5px}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -310,6 +323,9 @@ pre.code.sum{word-break:normal;overflow-wrap:anywhere;font-family:var(--body);fo
       <button class="choice" data-seg="uni" aria-pressed="false"><b id="t-g-uni"></b><span id="t-g-uni2"></span></button>
     </div>
     <div id="subj-wrap" hidden style="display:flex;flex-direction:column;gap:8px"><b id="t-g-subj"></b><div class="subjchips" id="subj-chips"></div></div>
+    <label class="f" id="difficulty-wrap"><span id="difficulty-label">Уровень сложности / Difficulty / Қиындық деңгейі</span>
+      <select id="exam-difficulty"><option value="easy">Базовый · Basic · Бастапқы</option><option value="medium" selected>Средний · Standard · Орташа</option><option value="hard">Продвинутый · Advanced · Жоғары</option></select>
+      <span class="note" id="difficulty-note">Уровни используют разные варианты задач по тем же 8 темам. / Different question variants across the same 8 topics.</span></label>
     <div class="grid2" id="goal-fields" hidden>
       <label class="f" id="unt-field"><span id="t-g-target"></span><input type="number" id="unt-target" min="50" max="140" value="100"></label>
       <label class="f" id="uni-field"><span id="t-g-grade"></span>
@@ -1554,7 +1570,33 @@ SUBJECTS.uni_websec = { seg:"uni", max:0, name:{en:"Web Security",ru:"Веб-б�
    h:{en:["You need to know exactly what code you run.","A lockfile fixes versions so a surprise update does not slip in.","An SBOM is a list of all components, for checking known flaws."],ru:["Нужно точно знать, какой код вы запускаете.","Lock-файл фиксирует версии, чтобы неожиданное обновление не проскочило.","SBOM — список всех компонентов для проверки известных уязвимостей."],kk:["Қандай код іске қосылатынын нақты білу керек.","Lock-файл нұсқаларды бекітеді, күтпеген жаңарту өтіп кетпейді.","SBOM — белгілі осалдықтарды тексеруге арналған барлық құрамдас бөліктер тізімі."]}}
  ]
 };
-const SUBJ_ORDER = { unt:["unt_hist","unt_read","unt_mlit","unt_math"], uni:["uni_calc","uni_linalg","uni_discrete","uni_os","uni_plsql","uni_ml","uni_cyber","uni_websec"] };
+/* Additional university exam banks: eight unique topics, plus eight fresh retest prompts. */
+function examItem(id, topic, q, options, answer, nextQ, nextOptions, nextAnswer) {
+  const tr = (s) => ({en:s,ru:s,kk:s});
+  return {a:{id,topic:tr(topic),q:tr(q),o:options,a:answer,h:{en:["Identify the key concept.","Eliminate options that contradict the definition.","Check the remaining choice."],ru:["Определите ключевое понятие.","Исключите неверные варианты.","Проверьте оставшийся ответ."],kk:["Негізгі ұғымды анықтаңыз.","Қате нұсқаларды алып тастаңыз.","Қалған жауапты тексеріңіз."]},k:[[topic.toLowerCase()],["explain","объяс","түсіндір"],["because","потому","себебі"],["check","провер","тексер"]]},b:{q:tr(nextQ),o:nextOptions,a:nextAnswer}};
+}
+function extraExam(seg, name, items){ return {seg,max:0,name:{en:name,ru:name,kk:name},A:items.map(x=>x.a),B:items.map(x=>x.b),terms:{}}; }
+SUBJECTS.uni_stats = extraExam("uni","Statistics and Probability",[
+  examItem("st_mean","Mean","Mean of 2, 4, 6, 8?",["4","5","6","8"],1,"Mean of 3, 5, 7?",["3","5","7","15"],1),
+  examItem("st_med","Median","Median of 1, 3, 9, 11, 20?",["3","9","11","20"],1,"Median of 2, 4, 6, 8?",["4","5","6","8"],1),
+  examItem("st_prob","Probability","Probability of heads on a fair coin?",["0","0.25","0.5","1"],2,"Probability of rolling 6 on a fair six-sided die?",["1/2","1/3","1/6","1/12"],2),
+  examItem("st_var","Variance","Which measures spread around the mean?",["Variance","Median","Mode","Sample size"],0,"Which value is always nonnegative?",["Covariance","Variance","Correlation","Mean"],1),
+  examItem("st_ind","Independence","For independent A and B, P(A and B) equals…",["P(A)+P(B)","P(A)P(B)","P(A)/P(B)","1"],1,"If independent events have probabilities 0.2 and 0.5, P(both) is…",["0.1","0.2","0.5","0.7"],0),
+  examItem("st_norm","Normal distribution","A symmetric bell-shaped continuous distribution is…",["Binomial","Normal","Poisson","Uniform discrete"],1,"In a normal distribution, the mean and median are…",["Always different","Equal","Unrelated","Undefined"],1),
+  examItem("st_ci","Confidence interval","A confidence interval describes…",["A range for a parameter","Certain future outcomes","An exact population value","A dataset sorting rule"],0,"Wider confidence level usually makes an interval…",["Narrower","Wider","Zero","Unchanged"],1),
+  examItem("st_p","Hypothesis testing","A p-value is computed assuming…",["Alternative is true","Null hypothesis is true","Sample is biased","Effect is large"],1,"A 0.01 p-value is…",["Proof of causality","Probability null is true","Evidence against null under assumptions","Effect size"],2)
+]);
+SUBJECTS.uni_python = extraExam("uni","Python Programming",[
+  examItem("py_types","Data types","What type does Python return for 3 / 2?",["int","float","str","bool"],1,"What is type(True).__name__?",["int","str","bool","list"],2),
+  examItem("py_list","Lists","What is [10,20,30][1]?",["10","20","30","Error"],1,"What is len([1,2,3,4])?",["3","4","5","0"],1),
+  examItem("py_dict","Dictionaries","Which syntax creates a dictionary?",["[1,2]","(1,2)","{'a':1}","{1,2}"],2,"What is {'x':5}.get('y',0)?",["5","0","None","Error"],1),
+  examItem("py_loop","Loops","Which statement skips to the next loop iteration?",["break","return","continue","pass"],2,"Which statement exits the nearest loop?",["break","continue","yield","assert"],0),
+  examItem("py_func","Functions","What does a function return without a return statement?",["0","False","None","Empty string"],2,"Which keyword creates a function?",["func","def","lambda-only","function"],1),
+  examItem("py_except","Exceptions","Which clause handles a raised exception?",["except","finally","else","with"],0,"Which block runs whether an exception occurs or not?",["except","finally","raise","assert"],1),
+  examItem("py_comp","Comprehensions","What is [x*x for x in range(3)]?",["[1,4,9]","[0,1,4]","[0,1,2]","[1,2,3]"],1,"What is [x for x in range(5) if x%2==0]?",["[1,3]","[0,2,4]","[2,4]","[0,1,2]"],1),
+  examItem("py_mut","Mutability","Which built-in type is immutable?",["list","dict","set","tuple"],3,"Which is mutable?",["str","int","tuple","list"],3)
+]);
+const SUBJ_ORDER = { unt:["unt_hist","unt_read","unt_mlit","unt_math"], uni:["uni_calc","uni_linalg","uni_discrete","uni_os","uni_plsql","uni_ml","uni_cyber","uni_websec","uni_stats","uni_python"] };
 function subjList(seg){ return (SUBJ_ORDER[seg]||[]).filter(id=> SUBJECTS[id]); }
 function sub(id){ return SUBJECTS[id || S.subj] || null; }
 /* tutors ranked by students' growth — example data for the prototype */
@@ -1949,13 +1991,13 @@ function rid(){ try{ const a = new Uint8Array(12); crypto.getRandomValues(a); re
 let USER = null, D = null;
 function users(){ return load("users") || {}; }
 function seedDemo(){ const u = users(); if(!u["demo@studymate.kz"]){ const salt = "sm-demo-2026"; u["demo@studymate.kz"] = {id:"demo", name:"Demo", salt, hash:hashPass("demo1234", salt), created:Date.now()}; store("users", u); } }
-function blankData(){ return {v:4, role:null, seg:null, target:null, goal:0, examDate:null, weeks:8, checks:[], weak:[], strong:[], etypes:[], readiness:0, correct:null, checkSecs:null,
+function blankData(){ return {v:5, role:null, seg:null, target:null, goal:0, difficulty:"medium", examDate:null, weeks:8, checks:[], weak:[], strong:[], etypes:[], readiness:0, correct:null, checkSecs:null,
   tasks:{}, mastered:{}, events:{}, subjects:[], tier:null, xp:0, streak:{last:null, days:0}, slot:{day:2, time:"19:00"}, invites:0, sent:{mentor:0, parent:0}, lastResult:null}; }
 function loadData(id){ const d = Object.assign(blankData(), load("data_"+id) || {});
   d.checks.forEach(c=>{ if(!c.subj) c.subj = c.seg==="uni" ? "uni_calc" : "unt_math"; });
   if(!Array.isArray(d.subjects) || !d.subjects.length) d.subjects = Array.from(new Set(d.checks.filter(c=> c.seg===d.seg).map(c=> c.subj))); d.streak = Object.assign({last:null, days:0}, d.streak); d.sent = Object.assign({mentor:0, parent:0}, d.sent); return d; }
 function saveData(){ if(USER && D) store("data_"+USER.id, D); }
-const SYNC = ["role","seg","target","goal","weeks","weak","strong","etypes","readiness","correct","checkSecs"];
+const SYNC = ["role","seg","target","goal","weeks","difficulty","weak","strong","etypes","readiness","correct","checkSecs"];
 function toD(){ if(!D) return; SYNC.forEach(k=> D[k] = S[k]); saveData(); }
 function fromD(){ SYNC.forEach(k=> S[k] = Array.isArray(D[k]) ? D[k].slice() : D[k]); }
 function dispName(){ return !USER ? "" : USER.guest ? L().guest : USER.name; }
@@ -1976,7 +2018,7 @@ function once(key, n){ if(!D || D.events[key]) return; D.events[key] = Date.now(
 function streakNow(){ if(!D || !D.streak.last) return 0; const t = new Date(), y = new Date(); y.setDate(y.getDate()-1); return (D.streak.last===dayStr(t) || D.streak.last===dayStr(y)) ? D.streak.days : 0; }
 function leagueIdx(xp){ return xp>=300 ? 2 : xp>=100 ? 1 : 0; }
 function resetRun(){ Object.assign(S, {role:null, seg:null, target:null, weeks:8, answers:[], qi:0, weak:[], strong:[], readiness:0, goal:0, topicIdx:0, hints:0, tutorPick:null, solved:false, attempts:0,
-  tbScore:null, tbTries:0, etypes:[], correct:null, checkSecs:null, bankMode:"A", grant:null, subj:null, subjects:[], queue:[], checkDone:false, fb:{ease:null, useful:null, again:null, pay:null}}); }
+  tbScore:null, tbTries:0, etypes:[], correct:null, checkSecs:null, difficulty:"medium", bankMode:"A", grant:null, subj:null, subjects:[], queue:[], checkDone:false, fb:{ease:null, useful:null, again:null, pay:null}}); }
 function startSession(user){
   USER = user; D = loadData(user.id); resetRun(); fromD(); if(D.checks.length) S.subj = D.checks[D.checks.length-1].subj;
   store("session", user.guest ? "guest" : user.email); renderAcct(); mark("signed_in");
@@ -2261,6 +2303,7 @@ function prefillGoal(keep){
   if(keep){ renderSubjChips(); return; }
   if(S.seg && !S.subjects.length) S.subjects = mySubjects();
   const ed = $("exam-date"); ed.min = isoPlus(1); ed.max = isoPlus(365); ed.value = (D && D.examDate && weeksTo(D.examDate)>0) ? D.examDate : isoPlus(56);
+  $("exam-difficulty").value = ["easy","medium","hard"].includes(S.difficulty) ? S.difficulty : "medium";
   if(S.seg){ document.querySelectorAll("#seg-choices .choice").forEach(x=> x.setAttribute("aria-pressed", x.dataset.seg===S.seg)); $("goal-fields").hidden = false;
     $("unt-field").hidden = S.seg!=="unt"; $("uni-field").hidden = S.seg!=="uni"; $("go-check").disabled = false;
     if(S.seg==="unt" && S.target) $("unt-target").value = S.target; if(S.seg==="uni" && S.target) $("uni-target").value = S.target; }
@@ -2270,6 +2313,7 @@ function updateWeeksOut(){ const v = $("exam-date").value, days = v ? weeksTo(v)
 $("exam-date").addEventListener("input", ()=>{ updateWeeksOut(); $("g-err").hidden = true; });
 function goalErr(k){ $("g-err").textContent = L()[k]; $("g-err").hidden = false; S.inputErrors++; mark("input_error"); }
 $("go-check").onclick = ()=>{
+  S.difficulty = $("exam-difficulty").value;
   const v = $("exam-date").value, days = /^\d{4}-\d{2}-\d{2}$/.test(v) ? weeksTo(v) : NaN;
   if(S.seg==="unt"){ const raw = $("unt-target").value.trim(), t = Number(raw); if(!raw || !Number.isInteger(t) || t<50 || t>140){ $("unt-target").focus(); return goalErr("err_target"); } S.target = t; S.goal = Math.round(t/140*100); }
   else { S.target = parseInt($("uni-target").value,10); S.goal = S.target; }
@@ -2286,7 +2330,11 @@ function startCheck(mode, subj){
 
 /* ---------- check ---------- */
 function bankA(id){ const s = sub(id); return s ? s.A : []; }
-function bank(){ const s = sub(); if(!s) return []; return S.bankMode==="B" ? s.B.map((q,i)=> Object.assign({}, s.A[i], q)) : s.A; }
+function bank(){ const s = sub(); if(!s) return []; return s.A.map((q,i)=>{
+  // Same eight learning topics; alternate independent A/B questions per level.
+  const useB = S.difficulty === "hard" ? S.bankMode === "A" : S.difficulty === "easy" ? S.bankMode === "B" : ((i % 2 === 0) === (S.bankMode === "B"));
+  return useB ? Object.assign({}, q, s.B[i]) : q;
+}); }
 function showPassage(el, q){ const t = q && q.p && PASSAGES[q.p] ? tx(PASSAGES[q.p]) : ""; el.hidden = !t; el.textContent = t; }
 function renderQuestion(){
   const q = bank()[S.qi], l = L();
@@ -2306,7 +2354,7 @@ function scoreCheck(){
     if(a===q.a) return t>90 ? "slow" : "ok"; if(a===-1) return "gap"; return t<15 ? "care" : "mis"; });
   S.correct = c; S.readiness = Math.round(c/8*100);
   S.checkDone = true;
-  if(D){ D.checks.push({at:Date.now(), seg:S.seg, subj:S.subj, bank:S.bankMode, readiness:S.readiness, correct:c, secs:S.checkSecs, weak:S.weak.map(i=> b[i].id), errTypes:etCounts()}); toD(); if(S.bankMode==="B") addXP(30); else once("checked_"+S.subj, 20); }
+  if(D){ D.checks.push({at:Date.now(), seg:S.seg, subj:S.subj, bank:S.bankMode, difficulty:S.difficulty, readiness:S.readiness, correct:c, secs:S.checkSecs, weak:S.weak.map(i=> b[i].id), errTypes:etCounts()}); toD(); if(S.bankMode==="B") addXP(30); else once("checked_"+S.subj, 20); }
 }
 
 /* ---------- result ---------- */
@@ -2501,7 +2549,21 @@ const PERM = ["not_granted","sampling_disabled","not_declared","capability_disab
 function aiOn(){ return !!S.sample && !S.aiBlocked; }
 function aiFail(e){ if(e && PERM.includes(e.code)){ S.aiBlocked = true; updateAIAvailability(); } if(e && e.code==="rate_limited") return L().ai_limit; return L().ai_err; }
 /* AI option B: outside Claude, the page calls its own server function (/api/ai), which keeps the API key */
-const AI_ENDPOINT = "api/ai";
+const AI_ENDPOINT = "/api/ai";
+/* Hosted static phone preview: limited, clearly labelled rule-based study coach. */
+function demoSampler(){
+  const f=async (messages,opts)=>{
+    const prompt=String((Array.isArray(messages)?messages[messages.length-1]?.content:messages)||"").toLowerCase();
+    const ru=S.lang==="ru", kk=S.lang==="kk";
+    let answer;
+    if(/пример|example|мысал|problem/.test(prompt)) answer=ru?"Попробуй похожую задачу: 4x + 7 = 23. Сначала вычти 7 из обеих частей. Чему равен x?":kk?"Ұқсас есеп: 4x + 7 = 23. Екі жақтан 7-ні азайт. x неге тең?":"Try a similar problem: 4x + 7 = 23. Subtract 7 from both sides first. What is x?";
+    else if(/план|plan|жоспар/.test(prompt)) answer=ru?"Разбей подготовку на 25-минутные блоки. Начни со слабой темы, реши 3 задачи и запиши одну ошибку. Что сейчас самое сложное?":kk?"Дайындықты 25 минуттық бөліктерге бөл. Әлсіз тақырыптан баста, 3 есеп шығар. Қай жері қиын?":"Study in 25-minute blocks. Start with a weak topic, solve three questions, and note one mistake. Which topic is hardest?";
+    else answer=ru?"Давай разберём вместе. Назови тему и покажи первый шаг решения — я подскажу следующий, не раскрывая ответ.":kk?"Бірге талдайық. Тақырыпты және алғашқы қадамыңды айт — мен келесі қадамға бағыттаймын.":"Let's work through it. Tell me the topic and your first attempt; I'll guide the next step without giving away the answer.";
+    if(opts?.onText) opts.onText({text:answer});return {text:answer};
+  };
+  f.json=async()=>({score:50,verdict:"Demo mode: use the keyword checklist for a real Teach-back score.",missing:[]});
+  f.limits=async()=>({});return f;
+}
 function fileToJpeg(file){ return new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>{ const img = new Image();
   img.onload = ()=>{ const k = Math.min(1, 1280/Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
     c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", 0.85).split(",")[1]); };
@@ -2511,8 +2573,9 @@ function serverSampler(info){
   async function call(messages, opts){
     opts = opts || {}; const body = {messages, maxTokens: opts.maxTokens || 700};
     if(opts.images && opts.images.length) body.images = [{media_type:"image/jpeg", data: await fileToJpeg(opts.images[0])}];
-    let r; try{ r = await fetch(AI_ENDPOINT, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)}); }catch(e){ throw {code:"network"}; }
-    if(!r.ok) throw {code: r.status===429 ? "rate_limited" : "server_error"};
+    const controller = new AbortController(), timer = setTimeout(()=>controller.abort(), 30000);
+    let r; try{ r = await fetch(AI_ENDPOINT, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body), signal:controller.signal}); }catch(e){ throw {code:e.name==="AbortError" ? "provider_timeout" : "network"}; }finally{ clearTimeout(timer); }
+    if(!r.ok){ const j = await r.json().catch(()=>({})); throw {code:j.error || (r.status===429 ? "quota_exceeded" : "server_error")}; }
     const j = await r.json(); const text = String(j.text || "").trim(); if(!text) throw {code:"empty"};
     if(opts.onText) opts.onText({text}); return {text};
   }
@@ -2564,7 +2627,7 @@ async function askAI(override){
     const res = await S.sample([{role:"user", content:aiRules()}].concat(chatTurns.slice(-10)),
       {cache:false, modelTier:"quick", onText:({text})=>{ ai.textContent = text; const b = $("ai-body"); b.scrollTop = b.scrollHeight; }});
     ai.textContent = res.text; chatTurns.push({role:"assistant", content:res.text});
-  }catch(e){ ai.textContent = (e && e.text) ? e.text : aiFail(e); chatTurns.pop(); }
+  }catch(e){ const errors={invalid_key_or_permissions:"Gemini: проверьте ключ и доступ к API / Check API key and permissions.",model_unavailable:"Модель недоступна. Проверьте GEMINI_MODEL / Model unavailable.",quota_exceeded:"Превышена квота Gemini / Gemini quota exceeded.",provider_timeout:"Время ожидания Gemini истекло / Gemini timed out.",provider_unavailable:"Провайдер временно недоступен / AI provider unavailable."}; ai.textContent = errors[e?.code] || ((e && e.text) ? e.text : aiFail(e)); chatTurns.pop(); }
   finally{ S.aiBusy = false; }
 }
 function addBubble(who, text){ const d=document.createElement("div"); d.className="bubble "+who; d.textContent=text; $("chat").appendChild(d); const b=$("ai-body"); b.scrollTop=b.scrollHeight; return d; }
@@ -2646,13 +2709,15 @@ const sess = load("session"), U = users();
 if(sess==="guest") startSession({id:"guest", name:null, email:null, guest:true});
 else if(sess && U[sess]) startSession({id:U[sess].id, name:U[sess].name, email:sess, guest:false});
 function setAiLabel(x){ S.aiLabel = x; $("t-ai-sub").textContent = L().ai_sub_by(x); }
-if(window.claude && typeof window.claude.use === "function"){
+if(/^https?:$/.test(location.protocol)){
+  fetch(AI_ENDPOINT, {method:"GET",cache:"no-store"}).then(r=> r.ok ? r.json() : null).then(info=>{
+    if(!info || !info.ok) return; S.sample = serverSampler(info); S.aiVia = "server"; S.imgOK = !!info.images; setAiLabel(String(info.label || "AI").slice(0,40)); updateAIAvailability(); }).catch(()=>{});
+}
+S.sample=demoSampler(); S.aiVia="demo"; S.imgOK=false; setAiLabel("Демо · без Gemini"); updateAIAvailability();
+if(window.claude && typeof window.claude.use === "function" && !/^https?:$/.test(location.protocol)){
   window.claude.use("sample").then(s=>{ if(!s) return; S.sample = s; S.aiVia = "claude"; setAiLabel("Claude"); updateAIAvailability();
     try{ s.limits().then(c=>{ S.imgOK = !!(c && c.images); if(c && c.images) $("ph-file").accept = c.images.mediaTypes.join(","); updateAIAvailability(); }).catch(()=>{}); }catch(e){}
   }).catch(()=>{});
-} else if(/^https?:$/.test(location.protocol)){
-  fetch(AI_ENDPOINT, {method:"GET"}).then(r=> r.ok ? r.json() : null).then(info=>{
-    if(!info || !info.ok) return; S.sample = serverSampler(info); S.aiVia = "server"; S.imgOK = !!info.images; setAiLabel(String(info.label || "AI").slice(0,40)); updateAIAvailability(); }).catch(()=>{});
 }
 })();
 </script>
