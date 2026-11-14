@@ -110,12 +110,13 @@ async function geminiCandidates(c) {
   return geminiWorking && list.includes(geminiWorking) ? [geminiWorking].concat(list.filter(m => m !== geminiWorking)) : list;
 }
 
-async function geminiOnce(c, model, contents, maxTokens, thinking) {
-  const generationConfig = { maxOutputTokens: maxTokens + 1500, temperature: 0.5 }; // room for the model's own reasoning
-  if (thinking) generationConfig.thinkingConfig = /^gemini-[3-9]/.test(model) ? { thinkingLevel: "low" } : { thinkingBudget: 512 };
+async function geminiOnce(c, model, contents, maxTokens, thinking, ms) {
+  const generationConfig = { maxOutputTokens: maxTokens + 400, temperature: 0.5 };
+  // keep the model's own reasoning to a minimum: hints need a fast answer, not a long chain of thought
+  if (thinking) generationConfig.thinkingConfig = /^gemini-[3-9]/.test(model) ? { thinkingLevel: "minimal" } : { thinkingBudget: 0 };
   const url = `${c.base}/models/${encodeURIComponent(model)}:generateContent`;
   const r = await request(url, {method: "POST", headers: {"x-goog-api-key": c.key, "content-type": "application/json"},
-    body: JSON.stringify({system_instruction: {parts: [{text: SYSTEM}]}, contents, generationConfig})}, 15000)
+    body: JSON.stringify({system_instruction: {parts: [{text: SYSTEM}]}, contents, generationConfig})}, ms)
     .catch(e => ({ ok: false, status: 504, json: async () => ({ error: { message: "timeout on " + model } }) }));
   const j = await r.json().catch(() => ({}));
   if (!r.ok) return {status: r.status, error: j?.error?.message || "Gemini request rejected"};
@@ -127,18 +128,20 @@ async function geminiOnce(c, model, contents, maxTokens, thinking) {
 async function callGemini(c, messages, image, maxTokens) {
   const contents = messages.map(m => ({role: m.role === "assistant" ? "model" : "user", parts: [{text: m.content}]}));
   if (image) contents[contents.length - 1].parts.push({inline_data: {mime_type: image.media_type, data: image.data}});
-  const started = Date.now();
+  const started = Date.now(), BUDGET = 48000; // the page waits up to 55 s
+  const left = () => BUDGET - (Date.now() - started);
   let last = {status: 502, error: "no Gemini model answered"};
   for (const model of await geminiCandidates(c)) {
-    if (Date.now() - started > 26000) break; // the page waits up to 45 s
-    let out = await geminiOnce(c, model, contents, maxTokens, true);
-    if (out.error && out.status === 400 && !/api key|permission/i.test(out.error)) out = await geminiOnce(c, model, contents, maxTokens, false);
-    if (out.error && (out.status === 503 || out.status === 429) && Date.now() - started < 15000) { await new Promise(r => setTimeout(r, 1500)); out = await geminiOnce(c, model, contents, maxTokens, true); }
+    if (left() < 8000) break;
+    const ms = () => Math.min(28000, left());
+    let out = await geminiOnce(c, model, contents, maxTokens, true, ms());
+    if (out.error && out.status === 400 && !/api key|permission/i.test(out.error) && left() > 8000) out = await geminiOnce(c, model, contents, maxTokens, false, ms());
+    if (out.error && (out.status === 503 || out.status === 429) && left() > 12000) { await new Promise(r => setTimeout(r, 1500)); out = await geminiOnce(c, model, contents, maxTokens, true, ms()); }
     if (!out.error) { geminiWorking = model; return out; }
     console.error("Gemini model failed", model, out.status, out.error);
     if (out.status === 404) deadModels.add(model);
     last = out;
-    if (out.status === 401 || out.status === 403 || /api key not valid/i.test(out.error)) break; // a bad key fails on every model
+    if (out.status === 401 || out.status === 403 || /api key not valid/i.test(out.error)) break;
   }
   return last;
 }
